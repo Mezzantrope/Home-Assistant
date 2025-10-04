@@ -1,0 +1,96 @@
+leaks:
+  automation:
+  - id: water_leak_autoshutoff
+    alias: "АВТ: Перекрытие воды при утечке"
+    mode: single
+    max_exceeded: silent
+
+    # Триггеры: любой датчик перешёл в on
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.0_leak_water_leak              # погреб
+        to: 'on'
+        for: "00:00:05"
+        id: leak_cellar
+      - platform: state
+        entity_id: binary_sensor.0x00158d0002774dd5_water_leak_2 # бойлерная
+        to: 'on'
+        for: "00:00:05"
+        id: leak_boiler
+      - platform: state
+        entity_id: binary_sensor.0x00158d0006c5d8e0_water_leak_2 # туалет 1 этаж
+        to: 'on'
+        for: "00:00:05"
+        id: leak_wc1
+      - platform: state
+        entity_id: binary_sensor.0x00158d00049dc8ca_water_leak_2 # под кухней
+        to: 'on'
+        for: "00:00:05"
+        id: leak_kitchen
+      - platform: state
+        entity_id: binary_sensor.0x00158d000271ba87_water_leak_2 # под стиралкой
+        to: 'on'
+        for: "00:00:05"
+        id: leak_washer
+      - platform: state
+        entity_id: binary_sensor.0x00158d00049e786a_water_leak_2 # ванная 2 этаж
+        to: 'on'
+        for: "00:00:05"
+        id: leak_bath2
+      - platform: state
+        entity_id: binary_sensor.0x00158d00049e7b45_water_leak_2 # ванная 3 этаж
+        to: 'on'
+        for: "00:00:05"
+        id: leak_bath3
+
+    variables:
+      press: switch.0_press
+      valve: switch.0_falseleak
+      # Человеческие названия для сообщения
+      leak_names:
+        binary_sensor.0_leak_water_leak: "утечка в погребе"
+        binary_sensor.0x00158d0002774dd5_water_leak_2: "утечка в бойлерной"
+        binary_sensor.0x00158d0006c5d8e0_water_leak_2: "утечка в туалете 1 этажа"
+        binary_sensor.0x00158d00049dc8ca_water_leak_2: "утечка под кухней"
+        binary_sensor.0x00158d000271ba87_water_leak_2: "утечка под стиральной машиной"
+        binary_sensor.0x00158d00049e786a_water_leak_2: "утечка под ванной 2 этажа"
+        binary_sensor.0x00158d00049e7b45_water_leak_2: "утечка в ванной 3 этажа"
+
+    action:
+      - choose:
+          # Если исполнительные устройства недоступны — сообщаем и выходим
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ states(press) in ['unavailable','unknown','none']
+                     or states(valve) in ['unavailable','unknown','none'] }}
+            sequence:
+              - action: telegram_bot.send_message
+                data:
+                  config_entry_id: 01K2VNS2ACTSA6AVDWXQKX738R
+                  message: >
+                    Обнаружена {{ leak_names.get(trigger.entity_id, trigger.entity_id) }} ({{ trigger.entity_id }}),
+                    но исполнитель недоступен: PRESS={{ states(press) }}, VALVE={{ states(valve) }}.
+                    Вода не перекрыта — проверь оборудование!
+              - stop: "Исполнители недоступны"
+
+      # 1) Сначала глушим нагнетатель давления
+      - service: switch.turn_off
+        target:
+          entity_id: "{{ press }}"
+
+      # 2) На всякий случай малую паузу, чтобы давление упало
+      - delay: "00:00:02"
+
+      # 3) Команда на перекрытие воды
+      - service: switch.turn_on
+        target:
+          entity_id: "{{ valve }}"
+
+      # 4) Уведомление в Telegram
+      - action: telegram_bot.send_message
+        data:
+          config_entry_id: 01K2VNS2ACTSA6AVDWXQKX738R
+          message: >
+            🚨 {{ now().strftime('%d.%m %H:%M') }} — {{ leak_names.get(trigger.entity_id, trigger.entity_id) }}.
+            Действия: нагнетатель → OFF, клапан Neptun → (вода перекрыта).
