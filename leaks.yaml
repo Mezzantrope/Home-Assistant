@@ -67,7 +67,7 @@ leaks:
             sequence:
               - action: telegram_bot.send_message
                 data:
-                  config_entry_id: 01K2VNS2ACTSA6AVDWXQKX738R
+                  config_entry_id: !secret telegram_entry_id
                   message: >
                     Обнаружена {{ leak_names.get(trigger.entity_id, trigger.entity_id) }} ({{ trigger.entity_id }}),
                     но исполнитель недоступен: PRESS={{ states(press) }}, VALVE={{ states(valve) }}.
@@ -90,7 +90,7 @@ leaks:
       # 4) Уведомление в Telegram
       - action: telegram_bot.send_message
         data:
-          config_entry_id: 01K2VNS2ACTSA6AVDWXQKX738R
+          config_entry_id: !secret telegram_entry_id
           message: >
             🚨 {{ now().strftime('%d.%m %H:%M') }} — {{ leak_names.get(trigger.entity_id, trigger.entity_id) }}.
             Действия: нагнетатель → OFF, клапан Neptun → (вода перекрыта).
