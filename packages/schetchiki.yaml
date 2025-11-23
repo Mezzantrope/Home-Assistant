@@ -1,0 +1,14 @@
+schetchiki:
+  automation:
+    - id: "1606010744418"
+      alias: Gas count
+      description: "Подсчёт расхода газа"
+      trigger:
+        - entity_id: binary_sensor.gazesp_live_impuls
+          platform: state
+          from: "on"
+          to: "off"
+      action:
+        service: counter.increment
+        target:
+          entity_id: counter.gas_counter

@@ -1,0 +1,118 @@
+remind:
+  template:
+    sensor:
+      ###---Счетчик разницы показаний по газу
+      - name: "gas_delta"
+        unique_id: gas_delta0
+        state: "{{(states('sensor.zhkh_gaz_abs')|float(0) - state_attr('sensor.zhkh_gaz_abs', 'last_period')|float(0))|round(1)}}"
+
+      ###---Счетчик разницы показаний по воде
+      - name: "water_delta"
+        unique_id: water_delta0
+        state: "{{(states('sensor.zhkh_water_abs')|float(0) - state_attr('sensor.zhkh_water_abs', 'last_period')|float(0))|round(1)}}"
+
+      ###---Счетчик разницы показаний по электричеству
+      - name: "elec_delta"
+        unique_id: elec_delta0
+        state: "{{(states('sensor.zhkh_elec_abs')|float(0) - state_attr('sensor.zhkh_elec_abs', 'last_period')|float(0))|round(1)}}"
+
+      ###---Счетчик затрат по газу
+      - name: "Затраты на газ "
+        unique_id: gas_cost
+        unit_of_measurement: "₽"
+        state: "{{(states('sensor.zhkh_gaz_abs')|float(0) * (states('input_number.tsena_na_gaz'))|float(0))|round(2)}}"
+
+      ###---Счетчик затрат по воде
+      - name: "Затраты на воду "
+        unique_id: water_cost
+        unit_of_measurement: "₽"
+        state: "{{(states('sensor.zhkh_water_abs')|float(0) * (states('input_number.tsena_na_vodu'))|float(0))|round(2)}}"
+
+      ###---Счетчик затрат по газу
+      - name: "Затраты на свет "
+        unique_id: elec_cost
+        unit_of_measurement: "₽"
+        state: "{{(states('sensor.zhkh_elec_abs')|float(0) * (states('input_number.tsena_na_elektrichestvo'))|float(0))|round(2)}}"
+
+      ###---Счетчик общих затрат
+      - name: "Затраты на всё "
+        unique_id: all_cost
+        unit_of_measurement: "₽"
+        state: "{{(states('sensor.zatraty_na_gaz')|float(0)) + (states('sensor.zatraty_na_vodu')|float(0)) + (states('sensor.zatraty_na_svet')|float(0)|round(2))}} "
+
+  automation:
+    - id: c8f3e68c34e143a19bc5f9b99504b51b
+      alias: Отправка показаний по газу
+      trigger:
+        - platform: time
+          at: "10:00:00"
+        - platform: time
+          at: "19:00:00"
+      condition:
+        - condition: template
+          value_template: "{{ now().day == 20 }}"
+      action:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_serv
+          message: >-
+            Подаём газ обязательно, ориентировочно '{{ (states('sensor.schiotchik_gaza')| float) }}' кубов.
+      mode: single
+
+    - id: Zhkh_remind_28
+      alias: Отправка показаний ЖКХ
+      trigger:
+        - platform: time
+          at: "10:00:00"
+        - platform: time
+          at: "19:00:00"
+      condition:
+        - condition: template
+          value_template: "{{ now().day == 28 }}"
+      action:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_serv
+          message: >-
+            #тест жкх за {{states('sensor.month_rus')}}:
+
+              Газ:       {{ (states('sensor.zhkh_gaz_abs')| float(0)) }} м3;
+              прошлый месяц: {{ state_attr('sensor.zhkh_gaz_abs', 'last_period')}} м3;
+
+              Эл-во:  {{ (states('sensor.zhkh_elec_abs')| float(0)) }} кВт;
+              прошлый месяц: {{ state_attr('sensor.zhkh_elec_abs', 'last_period')}} кВт;
+
+              Вода:    {{ (states('sensor.zhkh_water_abs')| float(0)) }} м3;
+              прошлый месяц: {{ state_attr('sensor.zhkh_water_abs', 'last_period')}} м3.
+      mode: single
+
+    - id: Zhkh_remind_01
+      alias: Отправка показаний ЖКХ каждое 1 число
+      trigger:
+        - platform: time
+          at: "23:55:00"
+      condition:
+        - condition: template
+          value_template: "{{ now().day == 1 }}"
+      action:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_serv
+          message: >-
+            #жкх за {{states('sensor.month_rus_before')}}:
+
+            Газ:       {{ (states('sensor.zhkh_gaz_abs')| float(0)) }} м3;
+            прошлый месяц: {{ state_attr('sensor.zhkh_gaz_abs', 'last_period')}} м3;
+
+            Эл-во:  {{ (states('sensor.zhkh_elec_abs')| float(0)) }} кВт;
+            прошлый месяц: {{ state_attr('sensor.zhkh_elec_abs', 'last_period')}} кВт;
+
+            Вода:    {{ (states('sensor.zhkh_water_abs')| float(0)) }} м3;
+            прошлый месяц: {{ state_attr('sensor.zhkh_water_abs', 'last_period')}} м3.
+      mode: single

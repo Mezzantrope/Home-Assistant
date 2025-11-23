@@ -1,0 +1,129 @@
+wmanddm:
+
+
+    
+    automation:
+        - alias: wm_washing
+          trigger:
+            platform: state
+            entity_id: binary_sensor.wm_status
+            to: 'on'
+          condition:
+          - condition: state
+            entity_id: input_select.wm_state
+            state: Stopped
+          action:
+            service: input_select.select_option
+            data:
+              entity_id: input_select.wm_state
+              option: Washing
+          id: 0d8b1184827d4d7fb72a683f7fb7caa1
+          mode: single          
+          
+          
+        - alias: wm_drying
+          trigger:
+            platform: state
+            entity_id: binary_sensor.wm_status
+            to: 'off'
+          condition:
+          - condition: state
+            entity_id: input_select.wm_state
+            state: Washing
+          action:
+          - service: input_select.select_option
+            data:
+              entity_id: input_select.wm_state
+              option: Drying
+          id: db6455aa5bae441096b92678d760bf78
+          mode: single          
+  
+  
+        - id: '1642704471569'
+          alias: 'ИНФ: стирка окончена'
+          description: ''
+          trigger:
+          - platform: state
+            entity_id: binary_sensor.wm_status
+            from: 'on'
+            to: 'off'
+            for: 00:05:00
+          condition: []
+          action:
+
+          - service: notify.anna
+            data:
+              message: 'УВД: Анечка, стирка окончена. Могу ещё.'
+          - delay:
+                hours: 0
+                minutes: 30
+                seconds: 0
+                milliseconds: 0              
+          mode: single
+          
+          
+          
+        - id: '1642704721838'
+          alias: 'ИНФ: сушка окончена '
+          description: ''
+          trigger:
+          - platform: state
+            entity_id: binary_sensor.dm_status
+            from: 'on'
+            to: 'off'
+            for: 00:05:00
+          condition: []
+          action:
+
+          - service: notify.anna
+            data:
+              message: 'УВД: Анечка, я посушила. Есть ещё мокрое?'
+          - delay:
+                hours: 0
+                minutes: 30
+                seconds: 0
+                milliseconds: 0              
+          mode: single
+          
+          
+        - id: '1642704805866'
+          alias: 'ИНФ: сушка инициализирована'
+          description: ''
+          trigger:
+          - platform: state
+            entity_id: binary_sensor.dm_status
+            from: 'off'
+            to: 'on'
+            for: 00:05:00
+          condition: []
+          action:
+          - service: notify.anna
+            data:
+              message: 'УВД: Включена сушильная машина.'
+          - delay:
+                hours: 0
+                minutes: 60
+                seconds: 0
+                milliseconds: 0             
+          mode: single
+          
+        - id: '1642704850936'
+          alias: 'ИНФ: стирка инициализирована'
+          description: ''
+          trigger:
+          - platform: state
+            entity_id: binary_sensor.wm_status
+            from: 'off'
+            to: 'on'
+            for: 00:05:00
+          condition: []
+          action:
+          - service: notify.anna
+            data:
+              message: 'УВД: Включена стиральная машина.'
+          - delay:
+                hours: 0
+                minutes: 60
+                seconds: 0
+                milliseconds: 0             
+          mode: single

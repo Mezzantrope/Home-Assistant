@@ -1,0 +1,12 @@
+used_water:
+
+  template:
+
+        sensor:
+            ###---Счетчик воды
+            - name: "water_meter_home"
+              unique_id: water_meter_home
+              state_class: total_increasing
+              device_class: water
+              unit_of_measurement: m³
+              state: "{{ states('sensor.cold_water_meter') }}"

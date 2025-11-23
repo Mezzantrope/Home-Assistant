@@ -1,0 +1,30 @@
+gaz:
+
+  automation:
+   - id: '351344353294751'
+     alias: Gas count
+     description: 'Подсчёт расхода газа'
+     trigger:
+     - entity_id: binary_sensor.gazesp_live_impuls
+       platform: state
+       from: 'on'
+       to: 'off'
+     action:
+     - data:
+         entity_id:
+         - counter.gas_counter
+       service: counter.increment 
+
+
+  template:
+
+        sensor:
+            ###---Счетчик газа
+            - name: "gas_meter_home"
+              unique_id: gas_meter_home
+              state_class: total_increasing
+              device_class: gas
+              unit_of_measurement: m³
+              state: "{{ states('sensor.gas_counter_sensor') }}"
+              
+              

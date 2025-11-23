@@ -1,0 +1,696 @@
+daylight:
+  # ===================================================================
+  # DAYLIGHT ANALYSIS PACKAGE
+  # ===================================================================
+  # Система анализа уличного освещения и классификации дня
+  #
+  # Логика работы:
+  # 1. Собирает данные освещённости с восхода+1ч до захода-1ч
+  # 2. Рассчитывает среднее значение за день
+  # 3. При заходе солнца отправляет отчёт в Telegram
+  #
+  # Установка:
+  # 1. Создайте файл: config/packages/daylight_analysis.yaml
+  # 2. Перезапустите Home Assistant
+  # ===================================================================
+
+  # -------------------------------------------------------------------
+  # MQTT Sensors (счётчики дней по типам)
+  # -------------------------------------------------------------------
+
+  mqtt:
+    sensor:
+      - name: "Daylight Sunny Days Count"
+        state_topic: "daylight/sunny_days"
+        icon: mdi:weather-sunny
+        unit_of_measurement: "дн"
+
+      - name: "Daylight Cloudy Days Count"
+        state_topic: "daylight/cloudy_days"
+        icon: mdi:weather-partly-cloudy
+        unit_of_measurement: "дн"
+
+      - name: "Daylight Overcast Days Count"
+        state_topic: "daylight/overcast_days"
+        icon: mdi:weather-cloudy
+        unit_of_measurement: "дн"
+
+  # -------------------------------------------------------------------
+  # Input Number (для хранения статистики)
+  # -------------------------------------------------------------------
+  input_number:
+    daylight_sum:
+      name: "Daylight Sum"
+      min: 0
+      max: 99999999
+      step: 1
+      mode: box
+      icon: mdi:sigma
+
+    daylight_count:
+      name: "Daylight Count"
+      min: 0
+      max: 10000
+      step: 1
+      mode: box
+      icon: mdi:counter
+
+    daylight_average:
+      name: "Daylight Average"
+      min: 0
+      max: 100000
+      step: 0.1
+      mode: box
+      unit_of_measurement: "lx"
+      icon: mdi:weather-sunny
+
+  # -------------------------------------------------------------------
+  # Input Boolean (флаги состояния)
+  # -------------------------------------------------------------------
+  input_boolean:
+    daylight_tracking_active:
+      name: "Daylight Tracking Active"
+      icon: mdi:chart-line
+      initial: false
+
+    daylight_report_sent:
+      name: "Daylight Report Sent Today"
+      icon: mdi:email-check
+      initial: false
+
+  # -------------------------------------------------------------------
+  # Template Sensors (вспомогательные датчики)
+  # -------------------------------------------------------------------
+  template:
+    - sensor:
+        # Текущий статус отслеживания
+        - name: "Daylight Tracking Status"
+          unique_id: daylight_tracking_status
+          icon: mdi:information-outline
+          state: >
+            {% if is_state('input_boolean.daylight_tracking_active', 'on') %}
+              Сбор данных активен
+            {% elif is_state('input_boolean.daylight_report_sent', 'on') %}
+              Отчёт отправлен
+            {% else %}
+              Ожидание рассвета
+            {% endif %}
+          attributes:
+            samples_collected: "{{ states('input_number.daylight_count') | int }}"
+            current_sum: "{{ states('input_number.daylight_sum') | float | round(0) }}"
+            current_average: "{{ states('input_number.daylight_average') | float | round(1) }}"
+
+        # Классификация дня по текущему среднему
+        - name: "Day Type Classification"
+          unique_id: day_type_classification
+          icon: >
+            {% set avg = states('input_number.daylight_average') | float %}
+            {% if avg >= 5000 %}mdi:weather-sunny
+            {% elif avg >= 2000 %}mdi:weather-partly-cloudy
+            {% else %}mdi:weather-cloudy
+            {% endif %}
+          state: >
+            {% set avg = states('input_number.daylight_average') | float %}
+            {% if avg >= 5000 %}
+              Солнечный день
+            {% elif avg >= 2000 %}
+              Переменная облачность
+            {% else %}
+              Пасмурный день
+            {% endif %}
+          attributes:
+            average_lux: "{{ states('input_number.daylight_average') | float | round(1) }}"
+            threshold_sunny: 5000
+            threshold_cloudy: 2000
+
+        # Текущая месячная статистика
+        - name: "Daylight Monthly Statistics"
+          unique_id: daylight_monthly_statistics
+          icon: mdi:calendar-month
+          state: >
+            {{ states('sensor.daylight_sunny_days_count') | int(0) + 
+               states('sensor.daylight_cloudy_days_count') | int(0) + 
+               states('sensor.daylight_overcast_days_count') | int(0) }}
+          attributes:
+            sunny_days: "{{ states('sensor.daylight_sunny_days_count') | int(0) }}"
+            cloudy_days: "{{ states('sensor.daylight_cloudy_days_count') | int(0) }}"
+            overcast_days: "{{ states('sensor.daylight_overcast_days_count') | int(0) }}"
+            total_days: >
+              {{ states('sensor.daylight_sunny_days_count') | int(0) + 
+                 states('sensor.daylight_cloudy_days_count') | int(0) + 
+                 states('sensor.daylight_overcast_days_count') | int(0) }}
+            month: "{{ now().strftime('%B %Y') }}"
+            sunny_percentage: >
+              {% set total = states('sensor.daylight_sunny_days_count') | int(0) + 
+                             states('sensor.daylight_cloudy_days_count') | int(0) + 
+                             states('sensor.daylight_overcast_days_count') | int(0) %}
+              {% if total > 0 %}
+                {{ ((states('sensor.daylight_sunny_days_count') | int(0) / total) * 100) | round(1) }}
+              {% else %}
+                0
+              {% endif %}
+
+  # -------------------------------------------------------------------
+  # Automation (автоматизации)
+  # -------------------------------------------------------------------
+  automation:
+    # 1. НАЧАЛО ОТСЛЕЖИВАНИЯ (восход + 1 час)
+    # -----------------------------------------------------------------
+    - id: "daylight_start_tracking"
+      alias: "Освещение: Начало отслеживания"
+      description: "Начинает сбор данных через 1 час после восхода"
+
+      trigger:
+        - platform: sun
+          event: sunrise
+          offset: "+01:00:00"
+
+      action:
+        # Сбрасываем счётчики
+        - service: input_number.set_value
+          target:
+            entity_id: input_number.daylight_sum
+          data:
+            value: 0
+
+        - service: input_number.set_value
+          target:
+            entity_id: input_number.daylight_count
+          data:
+            value: 0
+
+        - service: input_number.set_value
+          target:
+            entity_id: input_number.daylight_average
+          data:
+            value: 0
+
+        # Активируем отслеживание
+        - service: input_boolean.turn_on
+          target:
+            entity_id: input_boolean.daylight_tracking_active
+
+        # Сбрасываем флаг отправки отчёта
+        - service: input_boolean.turn_off
+          target:
+            entity_id: input_boolean.daylight_report_sent
+
+        - service: logbook.log
+          data:
+            name: "Освещение"
+            message: "☀️ Начало отслеживания освещённости (восход + 1ч)"
+
+    # 2. СБОР ДАННЫХ (каждые 5 минут)
+    # -----------------------------------------------------------------
+    - id: "daylight_collect_data"
+      alias: "Освещение: Сбор данных"
+      description: "Собирает данные освещённости каждые 5 минут"
+
+      trigger:
+        - platform: time_pattern
+          minutes: "/5" # Каждые 5 минут
+
+      condition:
+        # Только если отслеживание активно
+        - condition: state
+          entity_id: input_boolean.daylight_tracking_active
+          state: "on"
+
+        # Проверяем период: после восхода+1ч и до заката-1ч
+        - condition: sun
+          after: sunrise
+          after_offset: "+01:00:00"
+
+        - condition: sun
+          before: sunset
+          before_offset: "-01:00:00"
+
+        # Датчик доступен
+        - condition: template
+          value_template: "{{ states('sensor.esphome_web_da9c3e_tcs34725_illuminance') not in ['unavailable', 'unknown'] }}"
+
+      action:
+        - variables:
+            current_lux: "{{ states('sensor.esphome_web_da9c3e_tcs34725_illuminance') | float(0) }}"
+            current_sum: "{{ states('input_number.daylight_sum') | float(0) }}"
+            current_count: "{{ states('input_number.daylight_count') | int(0) }}"
+
+        # Добавляем текущее значение к сумме
+        - service: input_number.set_value
+          target:
+            entity_id: input_number.daylight_sum
+          data:
+            value: "{{ current_sum + current_lux }}"
+
+        # Увеличиваем счётчик измерений
+        - service: input_number.set_value
+          target:
+            entity_id: input_number.daylight_count
+          data:
+            value: "{{ current_count + 1 }}"
+
+        # Рассчитываем среднее
+        - service: input_number.set_value
+          target:
+            entity_id: input_number.daylight_average
+          data:
+            value: >
+              {% set new_count = current_count + 1 %}
+              {% set new_sum = current_sum + current_lux %}
+              {% if new_count > 0 %}
+                {{ (new_sum / new_count) | round(1) }}
+              {% else %}
+                0
+              {% endif %}
+
+    # 3. ОСТАНОВКА ОТСЛЕЖИВАНИЯ (закат - 1 час)
+    # -----------------------------------------------------------------
+    - id: "daylight_stop_tracking"
+      alias: "Освещение: Остановка отслеживания"
+      description: "Останавливает сбор данных за 1 час до заката"
+
+      trigger:
+        - platform: sun
+          event: sunset
+          offset: "-01:00:00"
+
+      condition:
+        - condition: state
+          entity_id: input_boolean.daylight_tracking_active
+          state: "on"
+
+      action:
+        # Деактивируем отслеживание
+        - service: input_boolean.turn_off
+          target:
+            entity_id: input_boolean.daylight_tracking_active
+
+        - service: logbook.log
+          data:
+            name: "Освещение"
+            message: >
+              🌅 Отслеживание завершено. Собрано измерений: {{ states('input_number.daylight_count') | int }}
+
+    # 4. ОТПРАВКА ОТЧЁТА (во время заката)
+    # -----------------------------------------------------------------
+    - id: "daylight_send_report"
+      alias: "УВД: Освещение: Отправка отчёта"
+      description: "Отправляет отчёт о дне во время заката"
+
+      trigger:
+        - platform: sun
+          event: sunset
+
+      condition:
+        # Отчёт ещё не отправлен
+        - condition: state
+          entity_id: input_boolean.daylight_report_sent
+          state: "off"
+
+        # Есть собранные данные
+        - condition: template
+          value_template: "{{ states('input_number.daylight_count') | int > 0 }}"
+
+      action:
+        - variables:
+            avg_lux: "{{ states('input_number.daylight_average') | float | round(1) }}"
+            samples: "{{ states('input_number.daylight_count') | int }}"
+
+        - service: telegram_bot.send_message
+          data:
+            config_entry_id: !secret telegram_entry_id_info
+            title: "🌅 ОТЧЁТ О ДНЕВНОМ ОСВЕЩЕНИИ"
+            message: |
+              {% set avg = states('input_number.daylight_average') | float %}
+              {% set count = states('input_number.daylight_count') | int %}
+              {% set sunrise_time = state_attr('sun.sun', 'next_rising') %}
+              {% set sunset_time = state_attr('sun.sun', 'next_setting') %}
+              📅 Дата: {{ now().strftime('%d.%m.%Y') }}
+
+              {% if avg >= 5000 %}
+              ☀️ **СОЛНЕЧНЫЙ ДЕНЬ**
+              {% elif avg >= 2000 %}
+              ⛅ **ПЕРЕМЕННАЯ ОБЛАЧНОСТЬ**
+              {% else %}
+              ☁️ **ПАСМУРНЫЙ ДЕНЬ**
+              {% endif %}
+
+              📊 Статистика:
+              • Средняя освещённость: {{ avg | round(1) }} lx
+              • Собрано измерений: {{ count }}
+              • Период измерений: {{ (count * 5) }} минут
+
+              🌄 Рассвет: {{ as_timestamp(sunrise_time) | timestamp_custom('%H:%M') }}
+              🌅 Закат: {{ now().strftime('%H:%M') }}
+            target:
+              - !secret chat_serv
+
+        # Помечаем, что отчёт отправлен
+        - service: input_boolean.turn_on
+          target:
+            entity_id: input_boolean.daylight_report_sent
+
+        - service: logbook.log
+          data:
+            name: "Освещение"
+            message: >
+              📧 Отчёт отправлен. Средняя освещённость: {{ states('input_number.daylight_average') | float | round(1) }} lx
+
+    # 5. ПРОВЕРКА ДОСТУПНОСТИ ДАТЧИКА
+    # -----------------------------------------------------------------
+    - id: "daylight_sensor_unavailable"
+      alias: "ИНФ: Освещение: Датчик недоступен"
+      description: "Уведомляет о проблемах с датчиком освещённости"
+
+      trigger:
+        - platform: state
+          entity_id: sensor.esphome_web_da9c3e_tcs34725_illuminance
+          to:
+            - "unavailable"
+            - "unknown"
+          for:
+            minutes: 15
+
+      condition:
+        # Только если отслеживание активно
+        - condition: state
+          entity_id: input_boolean.daylight_tracking_active
+          state: "on"
+
+      action:
+        - service: telegram_bot.send_message
+          data:
+            config_entry_id: !secret telegram_entry_id_info
+            title: "⚠️ ПРОБЛЕМА С ДАТЧИКОМ ОСВЕЩЁННОСТИ"
+            message: >-
+              🚨 Датчик освещённости недоступен!
+
+              📍 Устройство: TCS34725 Illuminance Sensor
+              📊 Статус: {{ states('sensor.esphome_web_da9c3e_tcs34725_illuminance') }}
+              ⏰ Время: {{ now().strftime('%d.%m.%Y %H:%M:%S') }}
+
+              📈 Собрано измерений до сбоя: {{ states('input_number.daylight_count') | int }}
+
+              ⚡ Отслеживание освещённости может быть неполным сегодня.
+            target:
+              - !secret chat_info
+
+        - service: logbook.log
+          data:
+            name: "Освещение"
+            message: "⚠️ ВНИМАНИЕ: Датчик освещённости недоступен во время отслеживания"
+
+    # 6. ВОССТАНОВЛЕНИЕ ДАТЧИКА
+    # -----------------------------------------------------------------
+    - id: "daylight_sensor_restored"
+      alias: "УВД: Освещение: Датчик восстановлен"
+      description: "Уведомляет о восстановлении датчика"
+
+      trigger:
+        - platform: state
+          entity_id: sensor.esphome_web_da9c3e_tcs34725_illuminance
+          from:
+            - "unavailable"
+            - "unknown"
+
+      condition:
+        # Только если отслеживание активно
+        - condition: state
+          entity_id: input_boolean.daylight_tracking_active
+          state: "on"
+
+        # И новое состояние валидно
+        - condition: template
+          value_template: "{{ states('sensor.esphome_web_da9c3e_tcs34725_illuminance') not in ['unavailable', 'unknown'] }}"
+
+      action:
+        - service: telegram_bot.send_message
+          data:
+            config_entry_id: !secret telegram_entry_id_info
+            title: "✅ ДАТЧИК ОСВЕЩЁННОСТИ ВОССТАНОВЛЕН"
+            message: >-
+              ✅ Датчик освещённости снова работает!
+
+              📍 Устройство: TCS34725 Illuminance Sensor
+              📊 Текущее значение: {{ states('sensor.esphome_web_da9c3e_tcs34725_illuminance') }} lx
+              ⏰ Время восстановления: {{ now().strftime('%H:%M:%S') }}
+
+              ⚡ Отслеживание освещённости возобновлено.
+            target:
+              - !secret chat_info
+        - service: logbook.log
+          data:
+            name: "Освещение"
+            message: "✅ Датчик освещённости восстановлен"
+
+    # 7. НАКОПЛЕНИЕ СТАТИСТИКИ ПО ТИПАМ ДНЕЙ
+    # -----------------------------------------------------------------
+    - id: "daylight_accumulate_day_type"
+      alias: "Освещение: Накопление месячной статистики"
+      description: "Накапливает количество дней каждого типа в MQTT"
+
+      trigger:
+        - platform: state
+          entity_id: input_boolean.daylight_report_sent
+          to: "on"
+
+      condition:
+        # Проверяем, что есть валидная классификация
+        - condition: template
+          value_template: "{{ states('sensor.day_type_classification') not in ['unavailable', 'unknown'] }}"
+
+      action:
+        - variables:
+            day_type: "{{ states('sensor.day_type_classification') }}"
+            current_sunny: "{{ states('sensor.daylight_sunny_days_count') | int(0) }}"
+            current_cloudy: "{{ states('sensor.daylight_cloudy_days_count') | int(0) }}"
+            current_overcast: "{{ states('sensor.daylight_overcast_days_count') | int(0) }}"
+
+        # Увеличиваем соответствующий счётчик в зависимости от типа дня
+        - choose:
+            # Солнечный день
+            - conditions:
+                - condition: template
+                  value_template: "{{ day_type == 'Солнечный день' }}"
+              sequence:
+                - service: mqtt.publish
+                  data:
+                    topic: "daylight/sunny_days"
+                    payload: "{{ current_sunny + 1 }}"
+                    retain: true
+
+                - service: logbook.log
+                  data:
+                    name: "Освещение"
+                    message: "☀️ Солнечный день записан. Всего за месяц: {{ current_sunny + 1 }}"
+
+            # Переменная облачность
+            - conditions:
+                - condition: template
+                  value_template: "{{ day_type == 'Переменная облачность' }}"
+              sequence:
+                - service: mqtt.publish
+                  data:
+                    topic: "daylight/cloudy_days"
+                    payload: "{{ current_cloudy + 1 }}"
+                    retain: true
+
+                - service: logbook.log
+                  data:
+                    name: "Освещение"
+                    message: "⛅ День с переменной облачностью записан. Всего за месяц: {{ current_cloudy + 1 }}"
+
+            # Пасмурный день
+            - conditions:
+                - condition: template
+                  value_template: "{{ day_type == 'Пасмурный день' }}"
+              sequence:
+                - service: mqtt.publish
+                  data:
+                    topic: "daylight/overcast_days"
+                    payload: "{{ current_overcast + 1 }}"
+                    retain: true
+
+                - service: logbook.log
+                  data:
+                    name: "Освещение"
+                    message: "☁️ Пасмурный день записан. Всего за месяц: {{ current_overcast + 1 }}"
+
+    # 8. МЕСЯЧНЫЙ ОТЧЁТ И СБРОС СТАТИСТИКИ
+    # -----------------------------------------------------------------
+    - id: "daylight_monthly_report"
+      alias: "УВД: Освещение: Месячный отчёт"
+      description: "Отправляет сводку за месяц и сбрасывает счётчики"
+
+      trigger:
+        - platform: time
+          at: "09:00:00" # Время отправки отчёта
+
+      condition:
+        # Проверяем, что сегодня 1-е число
+        - condition: template
+          value_template: "{{ now().day == 1 }}"
+
+      action:
+        - variables:
+            sunny_count: "{{ states('sensor.daylight_sunny_days_count') | int(0) }}"
+            cloudy_count: "{{ states('sensor.daylight_cloudy_days_count') | int(0) }}"
+            overcast_count: "{{ states('sensor.daylight_overcast_days_count') | int(0) }}"
+            total_days: "{{ sunny_count | int + cloudy_count | int + overcast_count | int }}"
+            prev_month: "{{ (now() - timedelta(days=1)).strftime('%B %Y') }}"
+            prev_month_ru: >
+              {% set month = (now() - timedelta(days=1)).month %}
+              {% set months = {
+                1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель',
+                5: 'Май', 6: 'Июнь', 7: 'Июль', 8: 'Август',
+                9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'
+              } %}
+              {{ months[month] }}
+
+        # Отправляем месячный отчёт
+        - service: telegram_bot.send_message
+          data:
+            config_entry_id: !secret telegram_entry_id_info
+            title: "📊 МЕСЯЧНАЯ СТАТИСТИКА ОСВЕЩЕНИЯ"
+            message: |
+              📅 Отчёт за {{ prev_month_ru }} {{ (now() - timedelta(days=1)).year }}
+
+              🌤️ Погодные условия за месяц:
+
+              ☀️ Солнечных дней: {{ sunny_count }}
+              {% if total_days > 0 %}({{ ((sunny_count / total_days) * 100) | round(0) }}%){% endif %}
+
+              ⛅ Дней с переменной облачностью: {{ cloudy_count }}
+              {% if total_days > 0 %}({{ ((cloudy_count / total_days) * 100) | round(0) }}%){% endif %}
+
+              ☁️ Пасмурных дней: {{ overcast_count }}
+              {% if total_days > 0 %}({{ ((overcast_count / total_days) * 100) | round(0) }}%){% endif %}
+
+              📊 Всего дней с данными: {{ total_days }}
+
+              {% if sunny_count >= cloudy_count and sunny_count >= overcast_count %}
+              🏆 Преобладали солнечные дни!
+              {% elif cloudy_count >= sunny_count and cloudy_count >= overcast_count %}
+              🌥️ Преобладала переменная облачность
+              {% else %}
+              ⛈️ Преобладали пасмурные дни
+              {% endif %}
+            target:
+              - !secret chat_serv
+
+        - service: logbook.log
+          data:
+            name: "Освещение"
+            message: |
+              📊 Месячный отчёт отправлен. Солнечных: {{ sunny_count }}, Облачных: {{ cloudy_count }}, Пасмурных: {{ overcast_count }}
+
+        # Ждём 2 секунды чтобы сообщение точно ушло
+        - delay:
+            seconds: 2
+
+        # Сбрасываем все счётчики на новый месяц
+        - service: mqtt.publish
+          data:
+            topic: "daylight/sunny_days"
+            payload: "0"
+            retain: true
+
+        - service: mqtt.publish
+          data:
+            topic: "daylight/cloudy_days"
+            payload: "0"
+            retain: true
+
+        - service: mqtt.publish
+          data:
+            topic: "daylight/overcast_days"
+            payload: "0"
+            retain: true
+
+        - service: logbook.log
+          data:
+            name: "Освещение"
+            message: "🔄 Счётчики месячной статистики сброшены"
+
+  # ===================================================================
+  # DASHBOARD КАРТОЧКА для мониторинга
+  # ===================================================================
+  # type: vertical-stack
+  # cards:
+  #   # Текущая классификация дня
+  #   - type: entities
+  #     title: 🌤️ Анализ дневного освещения
+  #     entities:
+  #       - entity: sensor.day_type_classification
+  #         name: Тип дня
+  #       - entity: input_number.daylight_average
+  #         name: Средняя освещённость
+  #       - entity: sensor.daylight_tracking_status
+  #         name: Статус отслеживания
+  #       - entity: input_number.daylight_count
+  #         name: Измерений собрано
+  #       - entity: input_boolean.daylight_tracking_active
+  #         name: Сбор данных активен
+  #       - entity: input_boolean.daylight_report_sent
+  #         name: Отчёт отправлен сегодня
+  #     state_color: true
+  #
+  #   # График текущего датчика
+  #   - type: sensor
+  #     entity: sensor.esphome_web_da9c3e_tcs34725_illuminance
+  #     name: Текущая освещённость
+  #     graph: line
+  #     hours_to_show: 12
+  #
+  #   # Индикатор классификации
+  #   - type: markdown
+  #     content: >
+  #       {% set avg = states('input_number.daylight_average') | float %}
+  #       {% if avg >= 5000 %}
+  #       ## ☀️ Солнечный день
+  #       Средняя освещённость выше 5000 lx
+  #       {% elif avg >= 2000 %}
+  #       ## ⛅ Переменная облачность
+  #       Средняя освещённость 2000-5000 lx
+  #       {% else %}
+  #       ## ☁️ Пасмурный день
+  #       Средняя освещённость ниже 2000 lx
+  #       {% endif %}
+  #
+  #       ---
+  #
+  #       **Текущее среднее:** {{ avg | round(1) }} lx
+  #
+  #       **Измерений:** {{ states('input_number.daylight_count') | int }}
+
+  # ===================================================================
+  # ЛОГИКА И ОСОБЕННОСТИ РАБОТЫ
+  # ===================================================================
+  #
+  # ✅ ВРЕМЕННЫЕ РАМКИ:
+  # - Начало сбора: Восход + 1 час
+  # - Конец сбора: Закат - 1 час
+  # - Отчёт: Во время фактического заката
+  #
+  # ✅ СБОР ДАННЫХ:
+  # - Частота: каждые 5 минут
+  # - При облачности 12 часов = 144 измерения
+  # - Использует накопительную сумму для точности
+  #
+  # ✅ КЛАССИФИКАЦИЯ:
+  # - Солнечный: ≥ 5000 lx
+  # - Переменная облачность: 2000-4999 lx
+  # - Пасмурный: < 2000 lx
+  #
+  # ✅ ЗАЩИТА ОТ ОШИБОК:
+  # - Проверка доступности датчика
+  # - Уведомление при сбоях
+  # - Игнорирование unavailable значений
+  # - Ежедневный сброс счётчиков
+  #
+  # ✅ УВЕДОМЛЕНИЯ:
+  # - Отчёт во время заката
+  # - Предупреждение о недоступности датчика
+  # - Уведомление о восстановлении
+  #
+  # ===================================================================

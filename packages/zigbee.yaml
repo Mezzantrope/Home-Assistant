@@ -1,0 +1,91 @@
+zigbee:
+
+    automation:  
+        
+        - alias: AUTO - test
+          description: Automatically
+          trigger:
+          - platform: mqtt
+            topic: zigbee2mqtt_main/bridge/state
+            payload: 'on'
+            value_template: "{% if ('online') %}\n  on\n{% else %}\n  off\n{% endif %}      \n"
+            id: z2m_router_offline
+            alias: When MQTT outputs offline
+          condition: []
+          action:
+          - alias: When ID "z2m_router_offline" is received
+            if:
+            - condition: trigger
+              id:
+              - z2m_router_offline
+              alias: Trigger z2m_router_offline activated
+            then:
+            - service: notify.me
+              data:
+                message: MQTT STATUS HAS BEEN CHANGED
+          mode: single
+          id: d6e96ad5edd04421b986b1c14f04c7c3
+          
+        - alias: AUTO - Zigbee2MQTT Restart upon adapter crash
+          description: Automatically restarts the Z2M addon when an adapter crash has been
+            detected.
+          trigger:
+          - platform: mqtt
+            topic: zigbee2mqtt_main/bridge/logging
+            payload: 'on'
+            value_template: "{% if ('SRSP - AF - dataRequestExt after 6000ms' in value_json['message'])
+              %}\n  on\n{% elif ('SRSP - AF - dataRequest after 6000ms' in value_json['message'])
+              %}\n  on\n{% elif ('SRSP - ZDO - mgmtPermitJoinReq after 6000ms' in value_json['message'])
+              %}\n  on\n{% else %}\n  off\n{% endif %}\n"
+            id: error-occured
+            alias: When MQTT log output via Z2M throws error messages
+          condition: []
+          action:
+          - alias: When ID "error-occured" is received
+            if:
+            - condition: trigger
+              id:
+              - error-occured
+              alias: 'Trigger: "error-occured"'
+            then:
+            - service: notify.me
+              data:
+                message: Restarting Z2M...
+                title: ⚠️ Zigbee Adapter (upper)crashed! ⚠️
+              alias: 'Service Call: Mobile App Notification'
+            - service: hassio.addon_restart
+              data:
+                addon: 1ff69cfe_zigbee2mqtt
+              alias: 'Service Call: Restart Add-On (Zigbee2MQTT)'
+          mode: single
+          id: 463d14b1b87a45fa9b2d0a4388fdcd29
+        - id: '1731404570126'
+          alias: 'AUTO: Z2M RESTART if curtains'
+          description: ''
+          triggers:
+          - trigger: state
+            entity_id:
+            - cover.0x00158d00042801b7
+            to: unavailable
+            for:
+              hours: 0
+              minutes: 10
+              seconds: 0
+          conditions:
+          - condition: state
+            entity_id: cover.0x00158d00045eb11c
+            state: unavailable
+            for:
+              hours: 0
+              minutes: 10
+              seconds: 0
+          actions:
+          - action: hassio.addon_restart
+            metadata: {}
+            data:
+              addon: 1ff69cfe_zigbee2mqtt
+          - action: notify.me
+            metadata: {}
+            data:
+              message: Zigbee Upper попытка перезагрузки!
+          mode: single

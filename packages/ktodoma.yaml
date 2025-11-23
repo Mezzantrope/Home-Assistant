@@ -1,0 +1,171 @@
+ktodoma:
+  automation:
+    #        - id: '355288031974340'
+    #          alias: 'УВД: Агата села играть'
+    #          description: ''
+    #          trigger:
+    #          - platform: state
+    #            entity_id:
+    #            - sensor.agata_gaming
+    #            to: 'True'
+    #            from: 'False'
+    #          condition: []
+    #          action:
+    #          - service: notify.me
+    #            data:
+    #              message: Агата играет без тебя!
+    #          - delay:
+    #              hours: 1
+    #              minutes: 0
+    #              seconds: 0
+    #              milliseconds: 0
+    #          mode: single
+
+    - id: "3552880319743401"
+      alias: "Home Presence Alert"
+      initial_state: true
+      trigger:
+        platform: state
+        entity_id: person.anna
+        for:
+          hours: 00
+          minutes: 03
+          seconds: 00
+      condition:
+        condition: and
+        conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state != trigger.from_state.state }}"
+      action:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_info
+          message: >-
+            {{ trigger.to_state.attributes.friendly_name }}
+            {% if trigger.to_state.state == 'home' %}дома!
+            {% else %}скорее всего вне дома.
+            {% endif %}
+      mode: single
+
+    # - id: '1634371720657'
+    #   alias: 'УВД: Анна дома'
+    #   description: ''
+    #   trigger:
+    #   - platform: state
+    #      entity_id: device_tracker.iphone_13
+    #      from: not_home
+    #      to: home
+    #   condition: []
+    #   action:
+    #     - service: notify.me
+    #       data:
+    #         message: '{{"\U0001F9D8"}} Анечка дома !'
+    #   mode: single
+
+    # - id: ada74cc12eb8430b90cbad771ede3e44
+    #   alias: 'УВД: Анна вне дома'
+    #   description: ''
+    #   trigger:
+    #     - platform: state
+    #       entity_id: device_tracker.iphone_13
+    #       to: not_home
+    #       for:
+    #         hours: 00
+    #         minutes: 01
+    #         seconds: 00
+    #   condition: []
+    #   action:
+    #   - service: notify.me
+    #      data:
+    #          message: '{{"\U0001F483"}} Анечка куда-то собралась (по версии роутера).'
+    #   mode: single
+
+    # - id: 63192c28eb784794a4587f226c73c96f
+    #   alias: 'УВД: Анна вне дома 2'
+    #   description: по пингу
+    #   trigger:
+    #     - platform: state
+    #       entity_id: person.anechka
+    #       to: not_home
+    #       for:
+    #         hours: 00
+    #         minutes: 01
+    #         seconds: 00
+    #         milliseconds: 0
+    #   condition: []
+    #   action:
+    #     - service: notify.me
+    #       data:
+    #         message: '{{"\U0001F483"}} Анечка куда-то собралась по версии пинга.'
+
+    # - id: '3552880319743402'
+    #   alias: 'УВД: Андрюшка дома'
+    #   description: ''
+    #   trigger:
+    #     - platform: state
+    #       entity_id: person.andrey
+    #       to: home
+    #   condition: []
+    #   action:
+    #     - service: notify.me
+    #       data:
+    #         message: "Андрюшка пришёл домой."
+    #   mode: single
+
+    # - alias: 'УВД: Андрюшка вне дома'
+    #   id: 355288031974fds3403
+    #   description: ''
+    #   trigger:
+    #     - platform: state
+    #       entity_id: person.andrey
+    #       from: home
+    #       to: not_home
+
+    #   condition: []
+    #   action:
+    #     - service: notify.me
+    #       data:
+    #         message: '{{"\U0001F3C3"}} Андрюшка покинул отчий дом!'
+    #   mode: single
+
+    # - alias: 'УВД: Агата ушла из дому 1'
+    #   id: 9f70e976c54f40d69339c7693fc522a8
+    #   description: ''
+    #   trigger:
+    #   - platform: state
+    #     entity_id: person.agata
+    #     to: not_home
+    #   condition: []
+    #   action:
+    #   - service: notify.me
+    #     data:
+    #         message: '{{"\U0001F645"}} Агата покинула отчий дом по пингу!'
+    #   mode: single
+
+    # - alias: 'УВД: Агата ушла из дому 2'
+    #   description: ''
+    #   trigger:
+    #   - platform: state
+    #     entity_id: device_tracker.5g_oblucatel
+    #     to: not_home
+    #   condition: []
+    #   action:
+    #   - service: notify.me
+    #     data:
+    #         message: '{{"\U0001F645"}} Агата покинула отчий дом по роутеру!'
+    #   mode: single
+
+    # - alias: 'УВД: Агата пришла домой'
+    #   description: ''
+    #   trigger:
+    #   - platform: state
+    #     entity_id: person.agata
+    #     to: home
+    #   condition: []
+    #   action:
+    #   - service: notify.me
+    #     data:
+    #         message: '{{"\U0001F645"}} Агата снова дома!'
+    #   mode: single

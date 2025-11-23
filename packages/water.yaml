@@ -1,0 +1,89 @@
+water:
+  automation:
+    - id: "1731841453178"
+      alias: "AUTO: WaterPressHighMOn"
+      description: ""
+      triggers:
+        - trigger: numeric_state
+          entity_id:
+            - sensor.0waterdata_pressure_bar
+          for:
+            hours: 0
+            minutes: 1
+            seconds: 0
+          above: 4.8
+      conditions: []
+      actions:
+        - action: notify.me
+          metadata: {}
+          data:
+            message: Water pressure too high!
+      mode: single
+
+    - id: "1700582032902"
+      alias: "АВТ: давление воды упало FIXED 2"
+      description: ""
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.0waterdata_pressure_bar
+          below: "1"
+          for: 00:05:00
+      condition: []
+      action:
+        - service: notify.family
+          data:
+            message:
+              '{{"\U0001F6B1"}} Давление воды упало в {{states(''sensor.time'') }}.
+              Нагнетатель выключен.'
+        - service: notify.warning
+          data:
+            message:
+              '{{"\U0001F6B1"}} Давление воды упало в {{states(''sensor.time'') }}.
+              Нагнетатель выключен.'
+        - service: notify.allmen
+          data:
+            message:
+              '{{"\U0001F6B1"}} На Троицкой 104-1-2 в {{states(''sensor.time'') }}
+              пропало давления воды.'
+        - type: turn_off
+          device_id: 533fc1b6879e3f8c10eb4905cd336848
+          entity_id: switch.0_press
+          domain: switch
+      mode: single
+
+    - id: "1653379327486"
+      alias: "УВД: Давление воды в норме."
+      description: "Восстановление давления воды"
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.0waterdata_pressure_bar
+          above: 1
+          for: 00:01:00
+      condition: []
+      action:
+        - service: notify.me
+          data:
+            message: "Давление воды в норме."
+      mode: single
+
+    - id: "1642154310671"
+      alias: "АВТ: давление воды упало FIXED"
+      description: ""
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.0waterdata_pressure_bar
+          below: "1"
+          for: 00:05:00
+      condition: []
+      action:
+        - service: notify.me
+          data:
+            message: '{{"\U0001F6B1"}} Давление воды упало в {{states(''sensor.time'') }}.  Нагнетатель выключен.Works?'
+        - service: notify.allmen
+          data:
+            message: '{{"\U0001F6B1"}} На Троицкой 104-1-2 в {{states(''sensor.time'') }} пропало давления воды.'
+        - type: turn_off
+          device_id: 533fc1b6879e3f8c10eb4905cd336848
+          entity_id: switch.0x84ba20fffe2ab5b5
+          domain: switch
+      mode: single

@@ -1,0 +1,64 @@
+fir_tree:
+  automation:
+    - id: "fir_tree_time_control"
+      alias: "АВТ: Елка: включение/выключение по времени"
+      description: "Включение switch.fir_tree в 17:17 и выключение в 05:00 с проверкой доступности"
+      trigger:
+        - platform: time
+          at: "17:17:00"
+          id: turn_on
+        - platform: time
+          at: "08:08:00"
+          id: turn_off
+
+      condition: []
+
+      action:
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ trigger.id == 'turn_on' }}"
+              sequence:
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: >
+                            {{ states('switch.fir_tree') not in ['unavailable', 'unknown', 'none'] }}
+                      sequence:
+                        - service: switch.turn_on
+                          target:
+                            entity_id: switch.fir_tree
+                  default:
+                    - service: telegram_bot.send_message
+                      data:
+                        config_entry_id: !secret telegram_entry_id_info
+                        target:
+                          - !secret chat_info
+                        message: >
+                          Розетка switch.fir_tree НЕДОСТУПНА при попытке ВКЛЮЧЕНИЯ
+                          в {{ now().strftime('%d.%m.%Y %H:%M') }}.
+
+            - conditions:
+                - condition: template
+                  value_template: "{{ trigger.id == 'turn_off' }}"
+              sequence:
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: >
+                            {{ states('switch.fir_tree') not in ['unavailable', 'unknown', 'none'] }}
+                      sequence:
+                        - service: switch.turn_off
+                          target:
+                            entity_id: switch.fir_tree
+                  default:
+                    - service: telegram_bot.send_message
+                      data:
+                        config_entry_id: !secret telegram_entry_id_info
+                        target:
+                          - !secret chat_info
+                        message: >
+                          Розетка switch.fir_tree НЕДОСТУПНА при попытке ВЫКЛЮЧЕНИЯ
+                          в {{ now().strftime('%d.%m.%Y %H:%M') }}.
+
+      mode: single

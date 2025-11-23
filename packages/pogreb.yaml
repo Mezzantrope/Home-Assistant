@@ -1,0 +1,315 @@
+pogreb:
+  automation:
+    - id: "1752867887591"
+      alias: "!!!АВТ: люк включает свет"
+      description: ""
+      triggers:
+        - type: opened
+          device_id: f3b94fe215fb4a320abd2e54c1a9b48a
+          entity_id: 7b0184644a476b7058cefffba82b6b1b
+          domain: binary_sensor
+          trigger: device
+      conditions: []
+      actions:
+        - action: switch.turn_on
+          metadata: {}
+          data: {}
+          target:
+            entity_id:
+              - switch.0_light_right
+              - switch.0_light_left
+      mode: single
+
+    - id: "1752867987240"
+      alias: "!!!АВТ: закрытие люка выключ свет"
+      description: ""
+      triggers:
+        - type: not_opened
+          device_id: f3b94fe215fb4a320abd2e54c1a9b48a
+          entity_id: 7b0184644a476b7058cefffba82b6b1b
+          domain: binary_sensor
+          trigger: device
+          for:
+            hours: 0
+            minutes: 0
+            seconds: 5
+      conditions: []
+      actions:
+        - action: switch.turn_off
+          metadata: {}
+          data: {}
+          target:
+            entity_id:
+              - switch.0_light_left
+              - switch.0_light_right
+      mode: single
+
+    #     - id: '860076008215070'
+    #       alias: 'ИНФ: подвальная недоступность'
+    #       description: ''
+    #       trigger:
+    #       - platform: state
+    #         entity_id:
+    #         - switch.0_gaz
+    #         to: unavailable
+    #       condition: []
+    #       action:
+    #       - service: notify.me
+    #         data:
+    #           message: 'ПОГРЕБ: Сенсоры в недоступности.'
+    #       mode: single
+
+    - alias: "ИНФ: ПОГРЕБ: Влажность критическая!"
+      id: pogreb_too_wet
+      description: "В подвале слишеом влажно"
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.0d1miniwater_0waterdata_humidity
+          above: 65
+      condition: []
+      action:
+        - type: turn_on
+          device_id: 7710f0b2d00cbd9dc44cdb55d296f69b
+          entity_id: switch.0_vent_in_l2_2
+          domain: switch
+        - type: turn_on
+          device_id: fd1d9c861b4840dc72571a730caa0487
+          entity_id: switch.0_vent_out_l2_2
+          domain: switch
+        - service: telegram_bot.send_message
+          data:
+            config_entry_id: !secret telegram_entry_id_info
+            target:
+              - !secret chat_warn
+            message: >-
+              ПОГРЕБ: Большая влажность в погребе!. Вентиляция включена принудительно!
+              Время отправки: {{ now().strftime('%Y-%m-%d %H:%M:%S') }}.
+      mode: single
+    ######################################################################
+  #  - id: freshairfinishmain
+  #   alias: "АВТ: вентиляция погреба выключается по времени MAIN"
+  #   description: ""
+  #   trigger:
+  #      - condition: state
+  #       entity_id: sensor.reserve_state
+  #       state: "unavailable"
+  #      - platform: time
+  #       at: "13:00:00"
+  #      - platform: time
+  #       at: "20:00:00"
+  #   condition: []
+  #   action:
+  #      - type: turn_off
+  #       device_id: 1bb71d501991c2b0b9be0857b3459c24
+  #       entity_id: switch.0_vent_in_l1
+  #       domain: switch
+  #      - type: turn_off
+  #       device_id: f30c136aa7963e5a1ae7b5a2f59f38c4
+  #       entity_id: switch.0_vent_out_l1
+  #       domain: switch
+  #   mode: single
+
+  #######################################################################
+  #  - id: latchopenslightsonmain
+  #   alias: "АВТ: люк подвала включает свет MAIN"
+  #   description: Открывается люк - загорается свет
+  #   trigger:
+  #      - condition: state
+  #       entity_id: sensor.reserve_state
+  #       state: "unavailable"
+
+  #      - condition: state
+  #       entity_id: binary_sensor.main_server_down
+  #       state: "off"
+
+  #      - type: opened
+  #       platform: device
+  #       device_id: f3b94fe215fb4a320abd2e54c1a9b48a
+  #       entity_id: binary_sensor.0x00158d000346abda_contact
+  #       domain: binary_sensor
+  #   condition: []
+  #   action:
+  #      - type: turn_on
+  #       device_id: 4c2a4cc75b94e4f9c0d6542aed0c8a2e
+  #       entity_id: switch.0x00158d00074aac04_left
+  #       domain: switch
+  #      - type: turn_on
+  #       device_id: 4c2a4cc75b94e4f9c0d6542aed0c8a2e
+  #       entity_id: switch.0x00158d00074aac04_right
+  #       domain: switch
+  #     #  - type: turn_off
+  #     #   device_id: 1bb71d501991c2b0b9be0857b3459c24
+  #     #   entity_id: switch.0_vent_in_l1
+  #     #   domain: switch
+  #     #  - type: turn_off
+  #     #   device_id: f30c136aa7963e5a1ae7b5a2f59f38c4
+  #     #   entity_id: switch.0_vent_out_l1
+  #     #   domain: switch
+  #     #  - type: turn_off
+  #     #   device_id: 1bb71d501991c2b0b9be0857b3459c24
+  #     #   entity_id: switch.0_vent_in_l2
+  #     #   domain: switch
+  #     #  - type: turn_off
+  #     #   device_id: f30c136aa7963e5a1ae7b5a2f59f38c4
+  #     #   entity_id: switch.0_vent_out_l2
+  #     #   domain: switch
+  #   mode: single
+#######################################################################
+
+#  - id: '860076008215070'
+#   alias: 'ИНФ: подвальная недоступность'
+#   description: ''
+#   trigger:
+#   - platform: state
+#      entity_id:
+#      - switch.0_gaz
+#      to: unavailable
+#   condition: []
+#   action:
+#   - service: notify.me
+#      data:
+#       message: 'ПОГРЕБ: Сенсоры в недоступности.'
+#   mode: single
+
+#  - id: '8600760082150703'
+#   alias: '@АВТ: нет движения в погребе выключает свет FIXED'
+#   description: 'АВТ: нет движения в погребе выключает свет FIXED'
+#   mode: single
+#   trigger:
+#   - type: no_motion
+#      platform: device
+#      device_id: a6e249ed29cfc59a767507ae890f96d7
+#      entity_id: binary_sensor.0_lumi_occupancy
+#      domain: binary_sensor
+#      for:
+#       hours: 0
+#       minutes: 15
+#       seconds: 0
+#   condition: []
+#   action:
+#      - if:
+#          - condition: state
+#           entity_id: binary_sensor.0_lumi_occupancy
+#           attribute: occupancy
+#           state: "off"
+#           for:
+#               hours: 0
+#               minutes: 10
+#               seconds: 0
+#       then:
+#          - service: switch.turn_off
+#           data: {}
+#           target:
+#              entity_id: switch.0_light_right
+#          - delay:
+#              hours: 0
+#              minutes: 5
+#              seconds: 0
+#              milliseconds: 0
+#          - service: switch.turn_off
+#           data: {}
+#           target:
+#              entity_id: switch.0_light_left
+
+#  - id: '8600760082150704'
+#   alias: 'АВТ: движение в погребе включает свет FIXED'
+#   description: ''
+#   trigger:
+#   - type: motion
+#      platform: device
+#      device_id: a6e249ed29cfc59a767507ae890f96d7
+#      entity_id: binary_sensor.0_lumi_occupancy
+#      domain: binary_sensor
+#   condition: []
+#   action:
+#   - type: turn_on
+#      device_id: 4c2a4cc75b94e4f9c0d6542aed0c8a2e
+#      entity_id: switch.0_light_left
+#      domain: switch
+#   - type: turn_on
+#      device_id: 4c2a4cc75b94e4f9c0d6542aed0c8a2e
+#      entity_id: switch.0_light_right
+#      domain: switch
+#   mode: single
+
+#  - id: '1640108347800'
+#   alias: 'АВТ: контроль ТП'
+#   description: ''
+#   trigger:
+#   - platform: state
+#      entity_id:
+#      - switch.0_warmfloor
+#      from: 'on'
+#      to: 'off'
+#      for: 07:01:00
+#   condition: []
+#   action:
+#   - service: notify.me
+#      data:
+#       message: 'ВНИМАНИЕ: Розетка насоса ТП выключена больше 7 часов!'
+#   mode: single
+
+#  - id: '1640108347801'
+#   alias: 'АВТ: контроль ТП по недоступности'
+#   description: ''
+#   trigger:
+#   - platform: state
+#      entity_id:
+#      - switch.0_warmfloor
+#      to: 'unavailable'
+#      for: 01:01:00
+#   condition: []
+#   action:
+#   - service: notify.me
+#      data:
+#       message: 'ВНИМАНИЕ: Розетка насоса ТП недоступна!!!'
+#   mode: single
+
+#  - id: '1640108347802'
+#   alias: 'АВТ: контроль розетки котла по недоступности'
+#   description: ''
+#   trigger:
+#   - platform: state
+#      entity_id:
+#      - switch.0_gaz
+#      to: 'unavailable'
+#      for: 01:01:00
+#   condition: []
+#   action:
+#   - service: notify.me
+#      data:
+#       message: 'ВНИМАНИЕ: Розетка котла недоступна!!!'
+#   mode: single
+
+#  - id: '1640108347803'
+#   alias: 'АВТ: контроль розетки полотенцесушителя по недоступности'
+#   description: ''
+#   trigger:
+#   - platform: state
+#      entity_id:
+#      - switch.0_towel
+#      to: 'unavailable'
+#      for: 01:01:00
+#   condition: []
+#   action:
+#   - service: notify.me
+#      data:
+#       message: 'ВНИМАНИЕ: Розетка полотенцесушителя недоступна!!!'
+#   mode: single
+
+#  - id: '1640108347804'
+#   alias: 'АВТ: контроль розетки нагнетателя по недоступности'
+#   description: ''
+#   trigger:
+#   - platform: state
+#      entity_id:
+#      - switch.0_press
+#      to: 'unavailable'
+#      for: 01:01:00
+#   condition: []
+#   action:
+#   - service: notify.me
+#      data:
+#       message: 'ВНИМАНИЕ: Розетка нагнетателя воды недоступна!!!'
+#   mode: single
+

@@ -1,0 +1,47 @@
+electricity:
+  automation:
+    - id: "123134876432136"
+      alias: "ИНФ: Elec Warnings High"
+      description: "ИНФ: Высокое напряжение"
+      triggers:
+        - trigger: numeric_state
+          entity_id:
+            - sensor.0xb4e3f9fffecfb25f_voltage
+          for:
+            hours: 0
+            minutes: 0
+            seconds: 5
+          above: 250
+      conditions: []
+      actions:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_warn
+          message: >-
+            Высокий вольтаж в сети, более 250В!
+      mode: single
+
+    - id: "1231348764321362"
+      alias: "ИНФ: Elec Warnings Low"
+      description: "ИНФ: Низкое напряжение"
+      triggers:
+        - trigger: numeric_state
+          entity_id:
+            - sensor.0xb4e3f9fffecfb25f_voltage
+          for:
+            hours: 0
+            minutes: 0
+            seconds: 5
+          below: 215
+      conditions: []
+      actions:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_warn
+          message: >-
+            Низкий вольтаж в сети, менее 215В!
+      mode: single

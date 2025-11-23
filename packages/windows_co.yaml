@@ -1,0 +1,301 @@
+windows_co:
+
+
+    automation: 
+    #   - alias: "NEW АВТ: в спальне холодно! "
+    #     description: "NEW АВТ: в спальне холодно! "
+    #     trigger:    
+    #       - platform: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_temperature
+    #         below: 17
+    #       - action: 
+    #           - domain: cover
+    #             entity_id: cover.drivent_69f
+    #             position: 0
+    #     mode: single                      
+                
+
+    #   - alias: "NEW АВТ: У Артёма холодно! "
+    #     description: "NEW АВТ: У Артёма холодно! "
+    #     trigger:    
+    #       - platform: numeric_state
+    #         entity_id: sensor.2_3_climate_plus_temperature
+    #         below: 18
+    #       - action: 
+    #         #   - domain: cover
+    #         #     entity_id: cover.drivent_b62
+    #         #     position: 0
+    #         - service: cover.close_cover
+    #           data: {}
+    #           target:
+    #             entity_id: cover.drivent_b62
+            
+    #     mode: single                      
+
+
+                
+    #   - alias: "NEW АВТ: проветривание Агаты по СО2 выше нуля"
+    #     description: "NEW АВТ: проветривание у Агаты по СО2 выше нуля "
+    #     trigger:
+    #       - platform: numeric_state
+    #         entity_id: sensor.2_2_climate_plus_co2
+    #         above: 700
+    #     condition:
+    #       - condition: numeric_state
+    #         entity_id: sensor.2_2_climate_plus_temperature
+    #         above: 21
+    #       - condition: numeric_state
+    #         entity_id: sensor.1_gb_out_temp
+    #         above: 0
+    #     action:
+    #       - service: cover.set_cover_position
+    #         target:
+    #           entity_id: cover.drivent_6b4
+    #         data:
+    #           position: 50
+    #       - delay:
+    #           hours: 0
+    #           minutes: 45
+    #           seconds: 0
+    #           milliseconds: 0
+    #       - service: cover.set_cover_position
+    #         target:
+    #           entity_id: cover.drivent_6b4
+    #         data:
+    #           position: 0
+    #       - delay:
+    #           hours: 0
+    #           minutes: 60
+    #           seconds: 0
+    #           milliseconds: 0      
+    #     mode: single    
+
+    #   - alias: "NEW АВТ: проветривание Артёма по СО2 выше нуля"
+    #     description: "NEW АВТ: проветривание у Артёма по СО2 выше нуля "
+    #     trigger:
+    #       - platform: numeric_state
+    #         entity_id: sensor.2_3_climate_plus_co2
+    #         above: 700
+    #     condition:
+    #       - condition: numeric_state
+    #         entity_id: sensor.2_3_climate_plus_temperature
+    #         above: 21
+    #       - condition: numeric_state
+    #         entity_id: sensor.1_gb_out_temp
+    #         above: 0
+    #     action:
+    #       - service: cover.set_cover_position
+    #         target:
+    #           entity_id: cover.drivent_b62
+    #         data:
+    #           position: 50
+    #       - delay:
+    #           hours: 0
+    #           minutes: 30
+    #           seconds: 0
+    #           milliseconds: 0
+    #       - service: cover.set_cover_position
+    #         target:
+    #           entity_id: cover.drivent_b62
+    #         data:
+    #           position: 0
+    #     mode: single    
+
+
+
+
+    
+    #   - alias: "NEW АВТ: проветривание спальни по СО2 выше нуля"
+    #     description: "NEW АВТ: проветривание спальни по СО2 выше нуля "
+    #     trigger:
+    #       - platform: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_carbon_dioxide
+    #         above: 700
+    #     condition:
+    #       - condition: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_temperature
+    #         above: 21
+    #       - condition: numeric_state
+    #         entity_id: sensor.1_gb_out_temp
+    #         above: 5
+    #     action:
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 50
+    #       - delay:
+    #           hours: 0
+    #           minutes: 30
+    #           seconds: 0
+    #           milliseconds: 0
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 0
+    #     mode: single
+        
+    #   - alias: "NEW АВТ: проветривание спальни по СО2 от - 5 до +5"
+    #     description: "NEW АВТ: проветривание спальни по СО2 при - 5 до +5 "
+    #     trigger:
+    #       - platform: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_carbon_dioxide
+    #         above: 700
+    #     condition:
+    #       - condition: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_temperature
+    #         above: 21
+    #       - condition: numeric_state
+    #         entity_id: sensor.1_gb_out_temp
+    #         above: -5
+    #         below: 5
+    #     action:
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 40
+
+    #       - delay:
+    #           hours: 0
+    #           minutes: 30
+    #           seconds: 0
+    #           milliseconds: 0
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 0
+    #     mode: single
+
+
+    #   - alias: "NEW АВТ: проветривание спальни по СО2 от - 10 до -5"
+    #     description: "NEW АВТ: проветривание спальни по СО2 при - 10 до -5 "
+    #     trigger:
+    #       - platform: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_carbon_dioxide
+    #         above: 700
+    #     condition:
+    #       - condition: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_temperature
+    #         above: 21
+    #       - condition: numeric_state
+    #         entity_id: sensor.1_gb_out_temp
+    #         above: -10
+    #         below: -5
+    #     action:
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 30
+
+    #       - delay:
+    #           hours: 0
+    #           minutes: 30
+    #           seconds: 0
+    #           milliseconds: 0
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 0
+    #     mode: single
+        
+    #   - alias: "NEW АВТ: проветривание спальни по СО2 от - 15 до -10"
+    #     description: "NEW АВТ: проветривание спальни по СО2 при - 15 до -10 "
+    #     trigger:
+    #       - platform: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_carbon_dioxide
+    #         above: 700
+    #     condition:
+    #       - condition: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_temperature
+    #         above: 21
+    #       - condition: numeric_state
+    #         entity_id: sensor.1_gb_out_temp
+    #         above: -15
+    #         below: -10
+    #     action:
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 20
+
+    #       - delay:
+    #           hours: 0
+    #           minutes: 30
+    #           seconds: 0
+    #           milliseconds: 0
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 0
+    #     mode: single        
+        
+    #   - alias: "NEW АВТ: проветривание спальни по СО2 ниже -15 выше -20"
+    #     description: "NEW АВТ: проветривание спальни по СО2 при - 15 до -20 "
+    #     trigger:
+    #       - platform: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_carbon_dioxide
+    #         above: 700
+    #     condition:
+    #       - condition: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_temperature
+    #         above: 21
+    #       - condition: numeric_state
+    #         entity_id: sensor.1_gb_out_temp
+    #         above: -20
+    #         below: -15
+    #     action:
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 10
+
+    #       - delay:
+    #           hours: 0
+    #           minutes: 20
+    #           seconds: 0
+    #           milliseconds: 0
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 0
+    #     mode: single   
+        
+    #   - alias: "NEW АВТ: проветривание спальни по СО2 ниже -20"
+    #     description: "NEW АВТ: проветривание спальни по СО2 при -20 "
+    #     trigger:
+    #       - platform: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_carbon_dioxide
+    #         above: 700
+    #     condition:
+    #       - condition: numeric_state
+    #         entity_id: sensor.air_monitor_lite_d162_temperature
+    #         above: 21
+    #       - condition: numeric_state
+    #         entity_id: sensor.1_gb_out_temp
+    #         below: -20
+    #     action:
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 30
+    #       - delay:
+    #           hours: 0
+    #           minutes: 15
+    #           seconds: 0
+    #           milliseconds: 0
+    #       - device_id: 1ee5e555ebc3db891e57bcdb969b9425
+    #         domain: cover
+    #         entity_id: cover.drivent_69f
+    #         type: set_position
+    #         position: 0
+    #     mode: single 

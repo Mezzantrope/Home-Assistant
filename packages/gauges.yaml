@@ -1,0 +1,86 @@
+gauges:
+    sensor:
+    
+# отфильтрованное значение
+
+      - platform: filter 
+        name: 040_filtered
+        entity_id: sensor.1_1_kotel_out 
+        filters:  
+          - filter: lowpass 
+            time_constant: 10 
+            precision: 1
+
+      - platform: filter 
+        name: 1_gb_out_temp_filtered_3
+        entity_id: sensor.1_gb_out_temp
+        filters:  
+          - filter: time_simple_moving_average 
+            window_size: "00:10"           
+
+# фильтрование данных датчика влажности горшка
+
+    #   - platform: filter 
+    #     name: soil_filtered_1
+    #     entity_id: sensor.soil_soil_moisture
+    #     filters:  
+    #       - filter: lowpass 
+    #         time_constant: 25
+    #         precision: 5
+
+    #   - platform: filter 
+    #     name: soil_filtered_2
+    #     entity_id: sensor.soil_soil_moisture
+    #     filters:  
+    #       - filter: outlier 
+    #         window_size: 100
+    #         radius: 5.0
+
+            
+    #   - platform: filter 
+    #     name: soil_filtered_3
+    #     entity_id: sensor.soil_soil_moisture
+    #     filters:  
+    #       - filter: time_simple_moving_average 
+    #         window_size: "00:30" 
+
+
+# Интернет статистика
+      - platform: history_stats
+        name: internet_down_time
+        entity_id: binary_sensor.internet_up
+        state: "Off"
+        type: time
+        start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+        end: "{{ now() }}"
+
+      - platform: history_stats
+        name: internet_down_count
+        entity_id: binary_sensor.internet_up
+        state: "Off"
+        type: count
+        start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+        end: "{{ now() }}"
+
+
+#  Горелка статистика          
+      - platform: history_stats
+        name: gaz_burn_count
+        entity_id: sensor.1_gb_flame
+        state: "True"
+        type: count
+        start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+        end: "{{ now() }}"
+
+      - platform: history_stats
+        name: gaz_burn_time
+        entity_id: sensor.1_gb_flame
+        state: "True"
+        type: time
+        start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+        end: "{{ now() }}"
+
+#  Учёт упавших ESP находится в sensors.yaml
+
+
+

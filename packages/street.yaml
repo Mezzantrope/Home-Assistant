@@ -1,0 +1,128 @@
+street:
+
+
+        automation:
+        
+
+             - id: '1652369391528_off'
+               description: "АВТ: Движение включает свет после 22"
+               mode: single
+               triggers:
+                 - type: turned_on
+                   device_id: e6c986978d69a831127dfd8bf0c20722
+                   entity_id: d34651f0c1fb80f3ee17280adb88aa01
+                   domain: binary_sensor
+                   trigger: device
+                   for:
+                     hours: 0
+                     minutes: 0
+                     seconds: 10
+               conditions:
+                 - condition: time
+                   after: "22:00:00"
+                   before: "05:00:00"
+               actions:
+                 - action: light.turn_on
+                   metadata: {}
+                   data:
+                     brightness_pct: 50
+                   target:
+                     device_id: 7cfbf504797e6d912dbc374e599ec853
+                 - delay:
+                     hours: 0
+                     minutes: 0
+                     seconds: 30
+                     milliseconds: 0
+                 - action: light.turn_off
+                   metadata: {}
+                   data: {}
+                   target:
+                     device_id: 7cfbf504797e6d912dbc374e599ec853
+   
+
+             - id: '1652369391528_off'
+               alias: 'АВТ: фонарь гасим'
+               description: ''
+               trigger:
+               - platform: state
+                 entity_id: light.smart_bulb_600hz
+                 from: 'off'
+                 to: 'on'
+                 for: 00:10:00
+               condition: []
+               action:
+               - service: light.turn_off
+                 entity_id: light.smart_bulb_600hz
+               mode: single        
+            
+
+             - id: '17103276666761231237'
+               alias: 'АВТ:  фонарь гасим c гарантией'
+               description: Проверяет каждые 30 минут, что фонарь не горит
+               trigger:
+               - platform: time_pattern
+                 minutes: /30
+               condition: []
+               action:
+               - service: light.turn_off
+                 entity_id: light.smart_bulb_600hz
+               mode: single        
+
+
+
+
+        
+#            - id: '1655234041650'
+#              alias: 'АВТ: Фонарь доступен к управлению'
+#              description: ''
+#              trigger:
+#              - platform: state
+#                entity_id:
+#                - device_tracker.esp_1156af
+#                for: 00:05:00
+#                to: not_home
+#                from: home
+#              condition: []
+#              action:
+#              - service: notify.me
+#                data:
+#                  message: Уличный фонарь отключён питанием.
+#              mode: single
+#              
+#              
+#              
+#            - id: '1655234121708'
+#             alias: 'АВТ: Фонарь доступен к управлению 2'
+#              description: ''
+#              trigger:
+#              - platform: state
+#                entity_id:
+#                - device_tracker.esp_1156af
+#                for: 00:05:00
+#                to: home
+#                from: not_home
+#              condition: []
+#              action:
+#              - service: notify.me
+#                data:
+#                  message: Уличный фонарь доступен к управлению.
+#              mode: single
+  
+
+  
+            # - id: '1652369391528'
+            #   alias: 'АВТ: фонарь гасим'
+            #   description: ''
+            #   trigger:
+            #   - platform: state
+            #     entity_id: light.smart_bulb_600hz
+            #     from: 'off'
+            #     to: 'on'
+            #     for: 00:05:00
+            #   condition: []
+            #   action:
+            #   - type: toggle
+            #     device_id: d1ea2a2964c547165237f05f6aaa1881
+            #     entity_id: switch.light0_0
+            #     domain: switch
+            #   mode: single

@@ -1,0 +1,99 @@
+mqtt_sensors:
+
+  mqtt:
+  
+    sensor:
+
+# проверяем доступность основного верхнего стика по MQTT
+
+      - name: "Main_Upper_Device_status"
+        unique_id: "mainupdevicestatus"
+        state_topic: "zigbee2mqtt_main/bridge/state"
+        value_template: "{{ value_json.state }}"
+
+# проверяем доступность основного нижнего стика по MQTT
+
+      - name: "Main_Down_Device_status"
+        unique_id: "maindowndevicestatus"
+        state_topic: "zigbee2mqtt_basement/bridge/state"
+        value_template: "{{ value_json.state }}"
+
+
+# зальный сенсор углекислоты в воздухе
+      - name: "00_hall_co2_main"
+        unique_id: "00001a"
+        state_topic: "zigbee2mqtt_main/0x00124b00231e19df"
+        value_template: "{{ value_json.co2 }}"
+        device_class: carbon_dioxide
+        unit_of_measurement: ppm
+        
+      - name: "00_hall_co2_alt"
+        unique_id: "00001b"
+        state_topic: "zigbee2mqtt_main_alt/0x00124b00231e19df"
+        value_template: "{{ value_json.co2 }}"
+        device_class: carbon_dioxide
+        unit_of_measurement: ppm
+
+# зальный сенсор температуры воздуха
+      - name: "00_hall_temp_main"
+        unique_id: "00002a"
+        state_topic: "zigbee2mqtt_main/0xa4c1385340765097"
+        value_template: "{{ value_json.temperature }}"
+        device_class: temperature 
+        unit_of_measurement: "°C"        
+        
+      - name: "00_hall_temp_alt"
+        unique_id: "00002b"
+        state_topic: "zigbee2mqtt_main_alt/0xa4c1385340765097"
+        value_template: "{{ value_json.temperature }}"
+        device_class: temperature
+        unit_of_measurement: "°C"
+
+# зальный сенсор влажности в воздухе
+      - name: "00_hall_humi_main"
+        unique_id: "00003a"
+        state_topic: "zigbee2mqtt_main/0xa4c1385340765097"
+        value_template: "{{ value_json.humidity }}"
+        device_class: humidity 
+        unit_of_measurement: "%"        
+        
+      - name: "00_hall_humi_alt"
+        unique_id: "00003b"
+        state_topic: "zigbee2mqtt_main_alt/0xa4c1385340765097"
+        value_template: "{{ value_json.humidity }}"
+        device_class: humidity
+        unit_of_measurement: "%"
+
+
+  template:
+  
+# зальный сенсор углекислоты в воздухе  
+    - sensor:
+        - name: "00_hall_co2"
+          state: >
+            {% if states('sensor.Main_Upper_Device_status') == 'online' %}
+              {{ states('sensor.00_hall_co2_main') }}
+            {% else %}
+              {{ states('sensor.00_hall_co2_alt') }}
+            {% endif %}
+
+# зальный сенсор температуры воздуха
+    - sensor:
+        - name: "00_hall_temperature"
+          state: >
+            {% if states('sensor.Main_Upper_Device_status') == 'online' %}
+              {{ states('sensor.00_hall_temp_main') }}
+            {% else %}
+              {{ states('sensor.00_hall_temp_alt') }}
+            {% endif %}
+
+# зальный сенсор влажности воздуха
+    - sensor:
+        - name: "00_hall_humidity"
+          state: >
+            {% if states('sensor.Main_Upper_Device_status') == 'online' %}
+              {{ states('sensor.00_hall_humi_main') }}
+            {% else %}
+              {{ states('sensor.00_hall_humi_alt') }}
+            {% endif %}
+

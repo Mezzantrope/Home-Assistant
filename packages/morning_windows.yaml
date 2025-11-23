@@ -1,0 +1,394 @@
+morning_windows:
+  # ===================================================================
+  # MORNING WINDOWS CLOSING AUTOMATION
+  # ===================================================================
+  # Автоматизация закрытия форточек каждое утро в 9:00
+  #
+  # Установка:
+  # 1. Создайте файл: config/packages/morning_windows.yaml
+  #    ИЛИ добавьте в automations.yaml
+  # 2. Убедитесь, что Telegram настроен
+  # 3. Перезапустите Home Assistant
+  # ===================================================================
+
+  automation:
+    # Основная автоматизация закрытия окон
+    # -----------------------------------------------------------------
+    - id: "morning_windows_close"
+      alias: "Форточки: Закрытие в 9:00"
+      description: "Закрывает все форточки каждое утро в 9:00"
+
+      trigger:
+        - platform: time
+          at: "09:00:00"
+
+      action:
+        # Проверяем доступность всех приводов
+        - variables:
+            bedroom_available: "{{ states('cover.drivent_69f') not in ['unavailable', 'unknown'] }}"
+            andrey_available: "{{ states('cover.drivent_d16') not in ['unavailable', 'unknown'] }}"
+            artem_available: "{{ states('cover.drivent_b62') not in ['unavailable', 'unknown'] }}"
+            agata_available: "{{ states('cover.drivent_6b4') not in ['unavailable', 'unknown'] }}"
+            all_available: >
+              {{ bedroom_available and andrey_available and 
+                 artem_available and agata_available }}
+            unavailable_windows: >
+              {% set windows = [] %}
+              {% if not bedroom_available %}
+                {% set windows = windows + ['Форточка спальни (69f)'] %}
+              {% endif %}
+              {% if not andrey_available %}
+                {% set windows = windows + ['Форточка Андрея (d16)'] %}
+              {% endif %}
+              {% if not artem_available %}
+                {% set windows = windows + ['Форточка Артёма (b62)'] %}
+              {% endif %}
+              {% if not agata_available %}
+                {% set windows = windows + ['Форточка Агаты (6b4)'] %}
+              {% endif %}
+              {{ windows | join(', ') }}
+
+        # Закрываем доступные окна
+        - choose:
+            # Если форточка спальни доступна
+            - conditions:
+                - condition: template
+                  value_template: "{{ bedroom_available }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.drivent_69f
+
+        - choose:
+            # Если форточка Андрея доступна
+            - conditions:
+                - condition: template
+                  value_template: "{{ andrey_available }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.drivent_d16
+
+        - choose:
+            # Если форточка Артёма доступна
+            - conditions:
+                - condition: template
+                  value_template: "{{ artem_available }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.drivent_b62
+
+        - choose:
+            # Если форточка Агаты доступна
+            - conditions:
+                - condition: template
+                  value_template: "{{ agata_available }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.drivent_6b4
+
+        # Небольшая пауза для завершения команд
+        - delay:
+            seconds: 2
+
+        # Логируем событие
+        - service: logbook.log
+          data:
+            name: "Форточки"
+            message: |
+              🪟 Утреннее закрытие окон в 09:00
+              {% if all_available %}
+              ✅ Все форточки закрыты успешно
+              {% else %}
+              ⚠️ Некоторые форточки недоступны: {{ unavailable_windows }}
+              {% endif %}
+
+        # Отправляем уведомление если есть недоступные окна
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ not all_available }}"
+              sequence:
+                - service: telegram_bot.send_message
+                  data:
+                    config_entry_id: !secret telegram_entry_id_info
+                    title: "⚠️ ПРОБЛЕМА С ФОРТОЧКАМИ"
+                    message: |
+                      🪟 Утреннее закрытие форточек в 09:00
+
+                      ❌ Недоступные приводы:
+                      {{ unavailable_windows.split(', ') | map('regex_replace', '^(.*)$', '• \\1') | join('\n') }}
+
+                      ⏰ Время: {{ now().strftime('%d.%m.%Y %H:%M:%S') }}
+
+                      Возможные причины:
+                      • Отключено питание привода
+                      • Проблемы с Zigbee сетью
+                      • Устройство вышло из строя
+
+                      {% if bedroom_available or andrey_available or artem_available or agata_available %}
+                      ✅ Доступные форточки были закрыты
+                      {% endif %}
+                    target:
+                      - !secret chat_warn
+
+    # Дополнительная проверка статуса через 5 минут
+    # -----------------------------------------------------------------
+    - id: "morning_windows_status_check"
+      alias: "Форточки: Проверка статуса после закрытия"
+      description: "Проверяет действительно ли закрылись окна через 5 минут"
+
+      trigger:
+        - platform: time
+          at: "09:05:00"
+
+      action:
+        - variables:
+            not_closed: >
+              {% set windows = [] %}
+              {% if states('cover.drivent_69f') not in ['closed', 'unavailable', 'unknown'] %}
+                {% set windows = windows + ['Спальня (69f): ' + states('cover.drivent_69f')] %}
+              {% endif %}
+              {% if states('cover.drivent_d16') not in ['closed', 'unavailable', 'unknown'] %}
+                {% set windows = windows + ['Андрей (d16): ' + states('cover.drivent_d16')] %}
+              {% endif %}
+              {% if states('cover.drivent_b62') not in ['closed', 'unavailable', 'unknown'] %}
+                {% set windows = windows + ['Артём (b62): ' + states('cover.drivent_b62')] %}
+              {% endif %}
+              {% if states('cover.drivent_6b4') not in ['closed', 'unavailable', 'unknown'] %}
+                {% set windows = windows + ['Агата (6b4): ' + states('cover.drivent_6b4')] %}
+              {% endif %}
+              {{ windows }}
+            has_not_closed: "{{ windows | length > 0 }}"
+
+        # Уведомляем если какие-то окна не закрылись
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ has_not_closed }}"
+              sequence:
+                - service: telegram_bot.send_message
+
+                  data:
+                    config_entry_id: !secret telegram_entry_id_info
+                    title: "⚠️ ФОРТОЧКИ НЕ ЗАКРЫЛИСЬ"
+                    message: |
+                      🪟 Проверка через 5 минут после команды закрытия
+
+                      ⚠️ Следующие форточки НЕ закрыты:
+                      {{ not_closed | join('\n• ') }}
+
+                      ⏰ Время проверки: {{ now().strftime('%H:%M:%S') }}
+
+                      Проверьте окна вручную!
+                    target:
+                      - !secret chat_warn
+
+                - service: logbook.log
+                  data:
+                    name: "Форточки"
+                    message: "⚠️ Не все форточки закрылись: {{ not_closed | join(', ') }}"
+
+    # Ручное закрытие всех форточек (опционально)
+    # -----------------------------------------------------------------
+    - id: "windows_close_manual"
+      alias: "Форточки: Ручное закрытие всех"
+      description: "Закрывает все форточки по кнопке"
+      initial_state: false # Отключено по умолчанию
+
+      trigger:
+        - platform: event
+          event_type: call_service
+          event_data:
+            domain: script
+            service: close_all_windows
+
+      action:
+        - service: cover.close_cover
+          target:
+            entity_id:
+              - cover.drivent_69f
+              - cover.drivent_d16
+              - cover.drivent_b62
+              - cover.drivent_6b4
+
+        - service: telegram_bot.send_message
+          data:
+            config_entry_id: !secret telegram_entry_id_info
+            title: "🪟 ФОРТОЧКИ"
+            message: |
+              ✅ Команда ручного закрытия всех форточек отправлена
+
+              ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+            target:
+              - !secret chat_info
+
+  # ===================================================================
+  # SCRIPT для ручного закрытия (опционально)
+  # ===================================================================
+  script:
+    close_all_windows:
+      alias: "Закрыть все форточки"
+      icon: mdi:window-closed
+      sequence:
+        - service: cover.close_cover
+          target:
+            entity_id:
+              - cover.drivent_69f
+              - cover.drivent_d16
+              - cover.drivent_b62
+              - cover.drivent_6b4
+
+        - service: telegram_bot.send_message
+          data:
+            config_entry_id: !secret telegram_entry_id_info
+            message: "✅ Все форточки закрываются..."
+            target:
+              - !secret chat_info
+
+  # ===================================================================
+  # INPUT BOOLEAN для управления (опционально)
+  # ===================================================================
+  input_boolean:
+    morning_window_closing_enabled:
+      name: "Автоматическое закрытие форточек в 9:00"
+      icon: mdi:window-closed-variant
+      initial: true
+
+  # ===================================================================
+  # TEMPLATE SENSOR для статуса окон
+  # ===================================================================
+  template:
+    - sensor:
+        - name: "Windows Status"
+          unique_id: windows_status_sensor
+          icon: mdi:window-open-variant
+          state: >
+            {% set closed = 0 %}
+            {% set open = 0 %}
+            {% set unavailable = 0 %}
+
+            {% for entity in ['cover.drivent_69f', 'cover.drivent_d16', 
+                              'cover.drivent_b62', 'cover.drivent_6b4'] %}
+              {% if states(entity) == 'closed' %}
+                {% set closed = closed + 1 %}
+              {% elif states(entity) in ['open', 'opening', 'closing'] %}
+                {% set open = open + 1 %}
+              {% else %}
+                {% set unavailable = unavailable + 1 %}
+              {% endif %}
+            {% endfor %}
+
+            {% if unavailable > 0 %}
+              Недоступно: {{ unavailable }}
+            {% elif open == 0 %}
+              Все закрыты
+            {% elif closed == 0 %}
+              Все открыты
+            {% else %}
+              Закрыто: {{ closed }}, Открыто: {{ open }}
+            {% endif %}
+          attributes:
+            bedroom: "{{ states('cover.drivent_69f') }}"
+            andrey: "{{ states('cover.drivent_d16') }}"
+            artem: "{{ states('cover.drivent_b62') }}"
+            agata: "{{ states('cover.drivent_6b4') }}"
+            all_closed: >
+              {{ states('cover.drivent_69f') == 'closed' and
+                 states('cover.drivent_d16') == 'closed' and
+                 states('cover.drivent_b62') == 'closed' and
+                 states('cover.drivent_6b4') == 'closed' }}
+            total_windows: 4
+  # ===================================================================
+  # DASHBOARD КАРТОЧКА для мониторинга
+  # ===================================================================
+  # type: vertical-stack
+  # cards:
+  #   # Управление
+  #   - type: entities
+  #     title: 🪟 Управление форточками
+  #     entities:
+  #       - entity: input_boolean.morning_window_closing_enabled
+  #         name: Автозакрытие в 9:00
+  #       - entity: script.close_all_windows
+  #         name: Закрыть все сейчас
+  #       - entity: sensor.windows_status
+  #         name: Статус окон
+  #     state_color: true
+  #
+  #   # Статус каждого окна
+  #   - type: entities
+  #     title: 🪟 Статус форточек
+  #     entities:
+  #       - entity: cover.drivent_69f
+  #         name: Спальня
+  #       - entity: cover.drivent_d16
+  #         name: Андрей
+  #       - entity: cover.drivent_b62
+  #         name: Артём
+  #       - entity: cover.drivent_6b4
+  #         name: Агата
+  #     state_color: true
+  #
+  #   # Кнопки управления
+  #   - type: horizontal-stack
+  #     cards:
+  #       - type: button
+  #         name: Закрыть все
+  #         icon: mdi:window-closed
+  #         tap_action:
+  #           action: call-service
+  #           service: cover.close_cover
+  #           target:
+  #             entity_id:
+  #               - cover.drivent_69f
+  #               - cover.drivent_d16
+  #               - cover.drivent_b62
+  #               - cover.drivent_6b4
+  #       - type: button
+  #         name: Открыть все
+  #         icon: mdi:window-open
+  #         tap_action:
+  #           action: call-service
+  #           service: cover.open_cover
+  #           target:
+  #             entity_id:
+  #               - cover.drivent_69f
+  #               - cover.drivent_d16
+  #               - cover.drivent_b62
+  #               - cover.drivent_6b4
+
+  # ===================================================================
+  # УСЛОВИЕ для автозакрытия (если нужен переключатель)
+  # ===================================================================
+  # Добавьте в основную автоматизацию условие:
+#
+# condition:
+#   - condition: state
+#     entity_id: input_boolean.morning_window_closing_enabled
+#     state: 'on'
+
+# ===================================================================
+# ЛОГИКА РАБОТЫ
+# ===================================================================
+#
+# ОСНОВНАЯ АВТОМАТИЗАЦИЯ (09:00):
+# 1. Проверяет доступность всех 4 приводов
+# 2. Закрывает каждое доступное окно отдельно
+# 3. Логирует событие в Logbook
+# 4. Если есть недоступные - отправляет уведомление в Telegram
+#
+# ПРОВЕРКА СТАТУСА (09:05):
+# 1. Проверяет действительно ли закрылись окна
+# 2. Если какие-то остались открытыми - уведомляет
+# 3. Помогает выявить проблемы с механизмами
+#
+# ДОПОЛНИТЕЛЬНО:
+# - Script для ручного закрытия всех окон
+# - Input boolean для включения/выключения автоматизации
+# - Template sensor для отображения общего статуса
+# - Dashboard карточки для управления
+#
+# ===================================================================

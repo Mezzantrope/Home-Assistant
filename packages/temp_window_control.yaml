@@ -1,0 +1,519 @@
+temp_window_control:
+  # ===================================================================
+  # TEMPERATURE WINDOW CONTROL AUTOMATION
+  # ===================================================================
+  # Автоматизация закрытия форточек при низкой температуре
+  #
+  # Логика:
+  # - Температура < 21°C → проверяем окно
+  # - Если открыто → закрываем
+  # - Если уже закрыто → уведомляем в Telegram
+  # - Повтор не чаще 1 раза в час для каждой комнаты
+  #
+  # Установка:
+  # 1. Создайте файл: config/packages/temp_window_control.yaml
+  # 2. Перезапустите Home Assistant
+  # ===================================================================
+
+  # -------------------------------------------------------------------
+  # Input DateTime (для отслеживания времени последнего срабатывания)
+  # -------------------------------------------------------------------
+  input_datetime:
+    temp_window_last_action_andrey:
+      name: "Андрей: Последнее действие с форточкой"
+      has_date: true
+      has_time: true
+      icon: mdi:clock-outline
+
+    temp_window_last_action_agata:
+      name: "Агата: Последнее действие с форточкой"
+      has_date: true
+      has_time: true
+      icon: mdi:clock-outline
+
+    temp_window_last_action_artem:
+      name: "Артём: Последнее действие с форточкой"
+      has_date: true
+      has_time: true
+      icon: mdi:clock-outline
+
+    temp_window_last_action_bedroom:
+      name: "Спальня: Последнее действие с форточкой"
+      has_date: true
+      has_time: true
+      icon: mdi:clock-outline
+
+  # -------------------------------------------------------------------
+  # Automation (автоматизации для каждой комнаты)
+  # -------------------------------------------------------------------
+  automation:
+    # 1. КОМНАТА АНДРЕЯ
+    # -----------------------------------------------------------------
+    - id: "temp_window_control_andrey"
+      alias: "Температура: Форточка Андрея"
+      description: "Закрывает форточку Андрея при температуре ниже 21°C"
+
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.0x00124b00272a6db8_temperature_2
+          below: 21
+          for:
+            minutes: 2 # Задержка для избежания ложных срабатываний
+
+      condition:
+        # Проверяем, что прошёл час с последнего действия
+        - condition: template
+          value_template: >
+            {% set last_action = states('input_datetime.temp_window_last_action_andrey') %}
+            {% if last_action in ['unknown', 'unavailable', ''] %}
+              true
+            {% else %}
+              {{ (as_timestamp(now()) - as_timestamp(last_action)) >= 3600 }}
+            {% endif %}
+
+        # Датчик температуры доступен
+        - condition: template
+          value_template: "{{ states('sensor.0x00124b00272a6db8_temperature_2') not in ['unavailable', 'unknown'] }}"
+
+        # Привод доступен
+        - condition: template
+          value_template: "{{ states('cover.drivent_d16') not in ['unavailable', 'unknown'] }}"
+
+      action:
+        - variables:
+            current_temp: "{{ states('sensor.0x00124b00272a6db8_temperature_2') | float }}"
+            window_state: "{{ states('cover.drivent_d16') }}"
+
+        - choose:
+            # Если форточка открыта - закрываем
+            - conditions:
+                - condition: template
+                  value_template: "{{ window_state in ['open', 'opening'] }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.drivent_d16
+
+                - service: telegram_bot.send_message
+                  data:
+                    config_entry_id: !secret telegram_entry_id_info
+                    message: |
+                      🌡️ Форточка Андрея закрывается
+
+                      ❄️ Температура: {{ current_temp }}°C (ниже 21°C)
+                      🪟 Статус: была открыта → закрывается
+                      ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+                    target:
+                      - !secret chat_info
+
+                - service: logbook.log
+                  data:
+                    name: "Температура"
+                    message: "❄️ Андрей: форточка закрыта из-за низкой температуры ({{ current_temp }}°C)"
+
+          # Если форточка уже закрыта - уведомляем
+          default:
+            - service: telegram_bot.send_message
+              data:
+                config_entry_id: !secret telegram_entry_id_info
+                message: |
+                  ⚠️ Форточка Андрея закрыта, но температура снизилась
+
+                  ❄️ Температура: {{ current_temp }}°C (ниже 21°C)
+                  🪟 Статус: уже закрыта
+                  ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+
+                  💡 Проверьте отопление в комнате!
+                target:
+                  - !secret chat_info
+
+            - service: logbook.log
+              data:
+                name: "Температура"
+                message: "⚠️ Андрей: форточка закрыта, но температура низкая ({{ current_temp }}°C)"
+
+        # Обновляем время последнего действия
+        - service: input_datetime.set_datetime
+          target:
+            entity_id: input_datetime.temp_window_last_action_andrey
+          data:
+            datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+    # 2. КОМНАТА АГАТЫ
+    # -----------------------------------------------------------------
+    - id: "temp_window_control_agata"
+      alias: "Температура: Форточка Агаты"
+      description: "Закрывает форточку Агаты при температуре ниже 21°C"
+
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.0x00124b00272b9087_temperature
+          below: 21
+          for:
+            minutes: 2
+
+      condition:
+        - condition: template
+          value_template: >
+            {% set last_action = states('input_datetime.temp_window_last_action_agata') %}
+            {% if last_action in ['unknown', 'unavailable', ''] %}
+              true
+            {% else %}
+              {{ (as_timestamp(now()) - as_timestamp(last_action)) >= 3600 }}
+            {% endif %}
+
+        - condition: template
+          value_template: "{{ states('sensor.0x00124b00272b9087_temperature') not in ['unavailable', 'unknown'] }}"
+
+        - condition: template
+          value_template: "{{ states('cover.drivent_6b4') not in ['unavailable', 'unknown'] }}"
+
+      action:
+        - variables:
+            current_temp: "{{ states('sensor.0x00124b00272b9087_temperature') | float }}"
+            window_state: "{{ states('cover.drivent_6b4') }}"
+
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ window_state in ['open', 'opening'] }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.drivent_6b4
+
+                - service: telegram_bot.send_message
+                  data:
+                    config_entry_id: !secret telegram_entry_id_info
+                    message: |
+                      🌡️ Форточка Агаты закрывается
+
+                      ❄️ Температура: {{ current_temp }}°C (ниже 21°C)
+                      🪟 Статус: была открыта → закрывается
+                      ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+                    target:
+                      - !secret chat_info
+
+                - service: logbook.log
+                  data:
+                    name: "Температура"
+                    message: "❄️ Агата: форточка закрыта из-за низкой температуры ({{ current_temp }}°C)"
+
+          default:
+            - service: telegram_bot.send_message
+              data:
+                config_entry_id: !secret telegram_entry_id_info
+                message: |
+                  ⚠️ Форточка Агаты закрыта, но температура снизилась
+
+                  ❄️ Температура: {{ current_temp }}°C (ниже 21°C)
+                  🪟 Статус: уже закрыта
+                  ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+
+                  💡 Проверьте отопление в комнате!
+                target:
+                  - !secret chat_info
+
+            - service: logbook.log
+              data:
+                name: "Температура"
+                message: "⚠️ Агата: форточка закрыта, но температура низкая ({{ current_temp }}°C)"
+
+        - service: input_datetime.set_datetime
+          target:
+            entity_id: input_datetime.temp_window_last_action_agata
+          data:
+            datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+    # 3. КОМНАТА АРТЁМА
+    # -----------------------------------------------------------------
+    - id: "temp_window_control_artem"
+      alias: "Температура: Форточка Артёма"
+      description: "Закрывает форточку Артёма при температуре ниже 21°C"
+
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.0x00124b002725c63f_temperature
+          below: 21
+          for:
+            minutes: 2
+
+      condition:
+        - condition: template
+          value_template: >
+            {% set last_action = states('input_datetime.temp_window_last_action_artem') %}
+            {% if last_action in ['unknown', 'unavailable', ''] %}
+              true
+            {% else %}
+              {{ (as_timestamp(now()) - as_timestamp(last_action)) >= 3600 }}
+            {% endif %}
+
+        - condition: template
+          value_template: "{{ states('sensor.0x00124b002725c63f_temperature') not in ['unavailable', 'unknown'] }}"
+
+        - condition: template
+          value_template: "{{ states('cover.drivent_b62') not in ['unavailable', 'unknown'] }}"
+
+      action:
+        - variables:
+            current_temp: "{{ states('sensor.0x00124b002725c63f_temperature') | float }}"
+            window_state: "{{ states('cover.drivent_b62') }}"
+
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ window_state in ['open', 'opening'] }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.drivent_b62
+
+                - service: telegram_bot.send_message
+                  data:
+                    config_entry_id: !secret telegram_entry_id_info
+                    message: |
+                      🌡️ Форточка Артёма закрывается
+
+                      ❄️ Температура: {{ current_temp }}°C (ниже 21°C)
+                      🪟 Статус: была открыта → закрывается
+                      ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+                    target:
+                      - !secret chat_info
+
+                - service: logbook.log
+                  data:
+                    name: "Температура"
+                    message: "❄️ Артём: форточка закрыта из-за низкой температуры ({{ current_temp }}°C)"
+
+          default:
+            - service: telegram_bot.send_message
+              data:
+                config_entry_id: !secret telegram_entry_id_info
+                message: |
+                  ⚠️ Форточка Артёма закрыта, но температура снизилась
+
+                  ❄️ Температура: {{ current_temp }}°C (ниже 21°C)
+                  🪟 Статус: уже закрыта
+                  ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+
+                  💡 Проверьте отопление в комнате!
+                target:
+                  - !secret chat_info
+
+            - service: logbook.log
+              data:
+                name: "Температура"
+                message: "⚠️ Артём: форточка закрыта, но температура низкая ({{ current_temp }}°C)"
+
+        - service: input_datetime.set_datetime
+          target:
+            entity_id: input_datetime.temp_window_last_action_artem
+          data:
+            datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+    # 4. СПАЛЬНЯ
+    # -----------------------------------------------------------------
+    - id: "temp_window_control_bedroom"
+      alias: "Температура: Форточка спальни"
+      description: "Закрывает форточку спальни при температуре ниже 21°C"
+
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.0x00124b0027250176_temperature
+          below: 21
+          for:
+            minutes: 2
+
+      condition:
+        - condition: template
+          value_template: >
+            {% set last_action = states('input_datetime.temp_window_last_action_bedroom') %}
+            {% if last_action in ['unknown', 'unavailable', ''] %}
+              true
+            {% else %}
+              {{ (as_timestamp(now()) - as_timestamp(last_action)) >= 3600 }}
+            {% endif %}
+
+        - condition: template
+          value_template: "{{ states('sensor.0x00124b0027250176_temperature') not in ['unavailable', 'unknown'] }}"
+
+        - condition: template
+          value_template: "{{ states('cover.drivent_69f') not in ['unavailable', 'unknown'] }}"
+
+      action:
+        - variables:
+            current_temp: "{{ states('sensor.0x00124b0027250176_temperature') | float }}"
+            window_state: "{{ states('cover.drivent_69f') }}"
+
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ window_state in ['open', 'opening'] }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.drivent_69f
+
+                - service: telegram_bot.send_message
+                  data:
+                    config_entry_id: !secret telegram_entry_id_info
+                    message: |
+                      🌡️ Форточка спальни закрывается
+
+                      ❄️ Температура: {{ current_temp }}°C (ниже 21°C)
+                      🪟 Статус: была открыта → закрывается
+                      ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+                    target:
+                      - !secret chat_info
+
+                - service: logbook.log
+                  data:
+                    name: "Температура"
+                    message: "❄️ Спальня: форточка закрыта из-за низкой температуры ({{ current_temp }}°C)"
+
+          default:
+            - service: telegram_bot.send_message
+              data:
+                config_entry_id: !secret telegram_entry_id_info
+                message: |
+                  ⚠️ Форточка спальни закрыта, но температура снизилась
+
+                  ❄️ Температура: {{ current_temp }}°C (ниже 21°C)
+                  🪟 Статус: уже закрыта
+                  ⏰ Время: {{ now().strftime('%H:%M:%S') }}
+
+                  💡 Проверьте отопление в комнате!
+                target:
+                  - !secret chat_info
+
+            - service: logbook.log
+              data:
+                name: "Температура"
+                message: "⚠️ Спальня: форточка закрыта, но температура низкая ({{ current_temp }}°C)"
+
+        - service: input_datetime.set_datetime
+          target:
+            entity_id: input_datetime.temp_window_last_action_bedroom
+          data:
+            datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+  # ===================================================================
+  # TEMPLATE SENSORS (дополнительно для мониторинга)
+  # ===================================================================
+  template:
+    - sensor:
+        # Общий статус температурного контроля
+        - name: "Temperature Window Control Status"
+          unique_id: temp_window_control_status
+          icon: mdi:thermometer-auto
+          state: >
+            {% set rooms_cold = 0 %}
+            {% if states('sensor.0x00124b00272a6db8_temperature_2') | float < 21 %}
+              {% set rooms_cold = rooms_cold + 1 %}
+            {% endif %}
+            {% if states('sensor.0x00124b00272b9087_temperature') | float < 21 %}
+              {% set rooms_cold = rooms_cold + 1 %}
+            {% endif %}
+            {% if states('sensor.0x00124b002725c63f_temperature') | float < 21 %}
+              {% set rooms_cold = rooms_cold + 1 %}
+            {% endif %}
+            {% if states('sensor.0x00124b0027250176_temperature') | float < 21 %}
+              {% set rooms_cold = rooms_cold + 1 %}
+            {% endif %}
+
+            {% if rooms_cold == 0 %}
+              Все комнаты тёплые
+            {% elif rooms_cold == 1 %}
+              1 комната холодная
+            {% else %}
+              {{ rooms_cold }} комнаты холодные
+            {% endif %}
+          attributes:
+            andrey_temp: "{{ states('sensor.0x00124b00272a6db8_temperature_2') }}°C"
+            agata_temp: "{{ states('sensor.0x00124b00272b9087_temperature') }}°C"
+            artem_temp: "{{ states('sensor.0x00124b002725c63f_temperature') }}°C"
+            bedroom_temp: "{{ states('sensor.0x00124b0027250176_temperature') }}°C"
+            andrey_window: "{{ states('cover.drivent_d16') }}"
+            agata_window: "{{ states('cover.drivent_6b4') }}"
+            artem_window: "{{ states('cover.drivent_b62') }}"
+            bedroom_window: "{{ states('cover.drivent_69f') }}"
+
+  # ===================================================================
+  # DASHBOARD КАРТОЧКА для мониторинга
+  # ===================================================================
+  # type: vertical-stack
+  # cards:
+  #   # Общий статус
+  #   - type: entities
+  #     title: 🌡️ Температурный контроль окон
+  #     entities:
+  #       - entity: sensor.temperature_window_control_status
+  #         name: Статус
+  #     state_color: true
+  #
+  #   # Детали по комнатам
+  #   - type: entities
+  #     title: 🌡️ Температура и форточки
+  #     entities:
+  #       - type: section
+  #         label: Андрей
+  #       - entity: sensor.0x00124b00272a6db8_temperature_2
+  #         name: Температура
+  #       - entity: cover.drivent_d16
+  #         name: Форточка
+  #
+  #       - type: section
+  #         label: Агата
+  #       - entity: sensor.0x00124b00272b9087_temperature
+  #         name: Температура
+  #       - entity: cover.drivent_6b4
+  #         name: Форточка
+  #
+  #       - type: section
+  #         label: Артём
+  #       - entity: sensor.0x00124b002725c63f_temperature
+  #         name: Температура
+  #       - entity: cover.drivent_b62
+  #         name: Форточка
+  #
+  #       - type: section
+  #         label: Спальня
+  #       - entity: sensor.0x00124b0027250176_temperature
+  #         name: Температура
+  #       - entity: cover.drivent_69f
+  #         name: Форточка
+  #     state_color: true
+
+  # ===================================================================
+  # ЛОГИКА РАБОТЫ
+  # ===================================================================
+  #
+  # ДЛЯ КАЖДОЙ КОМНАТЫ:
+  #
+  # 1. ТРИГГЕР:
+  #    - Температура < 21°C в течение 2 минут
+  #
+  # 2. УСЛОВИЯ:
+  #    - Прошёл час с последнего действия (защита от спама)
+  #    - Датчик температуры доступен
+  #    - Привод окна доступен
+  #
+  # 3. ДЕЙСТВИЯ:
+  #    А) Если форточка ОТКРЫТА:
+  #       - Закрыть форточку
+  #       - Уведомление: "Форточка ... закрывается"
+  #       - С температурой и статусом
+  #
+  #    Б) Если форточка УЖЕ ЗАКРЫТА:
+  #       - Уведомление: "Форточка ... закрыта, но температура снизилась"
+  #       - Предложение проверить отопление
+  #
+  # 4. ЗАПИСЬ ВРЕМЕНИ:
+  #    - Обновляем input_datetime для предотвращения повторов
+  #
+  # ЗАЩИТА ОТ СПАМА:
+  # - Задержка 2 минуты перед срабатыванием
+  # - Повтор не чаще 1 раза в час для каждой комнаты
+  # - Независимая работа для каждой комнаты
+  #
+  # ===================================================================

@@ -1,0 +1,75 @@
+alice:
+  automation:
+    - id: "356612084226390"
+      description: "АВТ: Алиса шутит по ночам"
+      trigger:
+        - platform: state
+          entity_id:
+            - binary_sensor.0x00158d000320b2d8_occupancy
+          from: "off"
+          to: "on"
+      condition:
+        condition: time
+        after: "01:00:00"
+        before: "06:00:00"
+
+      action:
+        - delay:
+            milliseconds: 3000
+        - service: media_player.volume_set
+          data:
+            entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+            volume_level: 0.5
+        - service: media_player.play_media
+          entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+          data:
+            media_content_id: <speaker is_whisper="true">'Хватит разгуливать. Ложись спать.'
+            media_content_type: text
+        - delay:
+            milliseconds: 400000
+      mode: single
+
+    - id: "3566120842263901"
+      alias: "АВТ: АЛИСА: утреннее оповещение"
+      description: Алиса общается утром
+      trigger:
+        - platform: state
+          entity_id:
+            - binary_sensor.0x00158d000320b2d8_occupancy
+          from: "off"
+          to: "on"
+      condition:
+        - condition: time
+          after: "06:45:00"
+          before: "08:30:00"
+          weekday:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+      action:
+        - service: media_player.volume_set
+          data:
+            entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+            volume_level: 0.4
+        - delay:
+            milliseconds: 60000
+        - service: media_player.play_media
+          entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+          data:
+            media_content_id: Какой сегодня день?
+            media_content_type: command
+        - delay:
+            milliseconds: 70000
+        - service: media_player.play_media
+          entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+          data:
+            media_content_id: Что за погода сегодня?
+            media_content_type: command
+        - delay:
+            hours: 0
+            minutes: 30
+            seconds: 0
+            milliseconds: 0
+      mode: single

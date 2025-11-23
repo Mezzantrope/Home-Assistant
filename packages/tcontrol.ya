@@ -1,0 +1,173 @@
+tcontrol:
+
+
+    automation:
+        
+        
+      - id: telegram-control-pannel-start
+        alias: Telegram Control Pannel Command
+        initial_state: true
+        trigger:
+          - platform: event
+            event_type: telegram_command
+            event_data:
+              command: /start
+        action:
+          - service: telegram_bot.send_message
+            data_template:
+            target: '{{ trigger.event.data.user_id }}'
+            message: |
+              "{{ [ \"Приветики\", \"Здаров\", \"Как жизня?\", \"Отлично выглядишь\",
+                    \"Вечер в хату!\", \"Здрасте!\", \"Что, хозяин, надо?\", \"Сейчас посмотрим\",
+                    \"Доброго дня\", \"Всех благ!\" ] | random }}       \n"
+        data:
+          inline_keyboard:
+            - 'Погреб:/sstatus,  Температуры:/tempus,  СО2:/kislota',
+            - 'Перекличка:/anybodyhome, Свет:/lightus,  Server:/servak '
+
+
+
+      - alias: IK - Telegram - start menu
+  trigger:
+    platform: event
+    event_type: telegram_callback
+    event_data:
+      data: /to_cp
+  action:
+  - service: telegram_bot.send_message
+    data_template:
+      target: '{{ trigger.event.data.user_id }}'
+      message: "{{ [ \"Приветики\", \"Здаров\", \"Как жизня?\", \"Отлично выглядишь\",
+        \"Вечер в хату!\", \"Здрасте!\", \"Что, хозяин, надо?\", \"Сейчас посмотрим\",
+        \"Доброго дня\", \"Всех благ!\" ] | random }}       \n"
+      data:
+      inline_keyboard:
+      - Погреб:/sstatus,  Температуры:/tempus,  СО2:/kislota
+      - Перекличка:/anybodyhome, Свет:/lightus,  Server:/servak
+  id: 4c9df9c576ae4bcaab45b11e8f78e5b7
+  
+  
+- alias: IK - Telegram - basement status
+  trigger:
+    platform: event
+    event_type: telegram_callback
+    event_data:
+      data: /sstatus
+  action:
+  - service: telegram_bot.edit_message
+    data_template:
+      message_id: last
+      chat_id: '{{ trigger.event.data.user_id }}'
+      title: ' *Соcтояние в погребе *'
+      message: "Давление воды - {{ states('sensor.water_data_Pressure_Atm') }} атм\nТемпература
+        - {{ states('sensor.tempbasement') }} C\nВлажность - {{ states('sensor.humidbasement')
+        }} %\nРабота приточки - {{ states('switch.sonoff_1001045f35') }} \n \n"
+      inline_keyboard:
+      - '{{ "\u21a9\ufe0f" }} Назад в меню:/to_cp'
+  id: 1f7206648cf949379fa820db18e251b8
+  
+  
+- alias: IK - Telegram - all room temperatures
+  trigger:
+    platform: event
+    event_type: telegram_callback
+    event_data:
+      data: /tempus
+  action:
+  - service: telegram_bot.edit_message
+    data_template:
+      message_id: last
+      chat_id: '{{ trigger.event.data.user_id }}'
+      title: ' * Температуры *'
+      message: "Гостинная - {{ states('sensor.firstfloor') }} С\nКомната Андрея -
+        {{ states('sensor.mh_z19_temperature') }} C\nКомната Агаты - {{ states('sensor.agata_temp_temperature')
+        }} C\nКомната Артёма - {{ states('sensor.artem_temp_temperature') }} C\nСпальня
+        - {{ states('sensor.bedroom_temperature') }} C\nКинотеатр - {{ states('sensor.cinema_temperature')
+        }} C\nПогреб - {{ states('sensor.tempbasement') }} C\nПолотенцесушитель -
+        {{ states('sensor.bath3_towel_temperature') }} C\nДривент Андрея - {{ states('cover.drivent_d16'),
+        state_attr('cover.drivent_d16', 'current_position') }}\nДривент спальни -
+        {{ states('cover.drivent_69f'), state_attr('cover.drivent_69f', 'current_position')
+        }}\nНа улице - {{ state_attr('weather.troitskaia_104_1_2', 'temperature')
+        }} C\n \n"
+      inline_keyboard:
+      - '{{ "\u21a9\ufe0f" }} Назад в меню:/to_cp'
+      
+      
+  id: aa4e182e397d44d09714b046e0b43105
+- alias: IK - Telegram - all room CO2
+  trigger:
+    platform: event
+    event_type: telegram_callback
+    event_data:
+      data: /kislota
+  action:
+  - service: telegram_bot.edit_message
+    data_template:
+      message_id: last
+      chat_id: '{{ trigger.event.data.user_id }}'
+      title: ' * Углекислый газ *'
+      message: 'Гостинная - {{ states(''sensor.hall_co2_co2'') }} ppm
+
+        Комната Андрея - {{ states(''sensor.mh_z19_co2_value'') }} ppm
+
+        Спальня - {{ states(''sensor.air_monitor'') }} ppm
+
+        '
+      inline_keyboard:
+      - '{{ "\u21a9\ufe0f" }} Назад в меню:/to_cp'
+  id: a2f19a26a7354020a5963783fdec5a27
+- alias: IK - Telegram - family presence request
+  trigger:
+    platform: event
+    event_type: telegram_callback
+    event_data:
+      data: /anybodyhome
+  action:
+  - service: telegram_bot.edit_message
+    data_template:
+      message_id: last
+      chat_id: '{{ trigger.event.data.user_id }}'
+      title: ' * Перекличка *'
+      message: "Анюта - {{ states('device_tracker.iphone_13') }} \nАндрей - {{ states('device_tracker.falcon_x')
+        }} \nАгата - {{ states('device_tracker.5g_oblucatel') }} \n"
+      inline_keyboard:
+      - '{{ "\u21a9\ufe0f" }} Назад в меню:/to_cp'
+  id: 948cf77bd4824ebea423408f72c87a1e
+- alias: IK - Telegram - lights check status
+  trigger:
+    platform: event
+    event_type: telegram_callback
+    event_data:
+      data: /lightus
+  action:
+  - service: telegram_bot.edit_message
+    data_template:
+      message_id: last
+      chat_id: '{{ trigger.event.data.user_id }}'
+      title: ' * Освещение *'
+      message: "Артём 1 - {{ states('switch.artem_light_left') }} \nАртём 2 - {{ states('switch.artem_light_right')
+        }}\nТуалет 2 зеркало - {{ states('switch.bath2_relay_l2') }}\nЛевая лампа
+        спальни - {{ states('switch.sonoff_100104b5a2') }}\nПравая лампа спальни -
+        {{ states('switch.sonoff_1001041b87') }}\nПодвал слева - {{ states('switch.basementswitch_switch_left')
+        }}\nПодвал справа - {{ states('switch.basementswitch_switch_right') }}\n"
+      inline_keyboard:
+      - '{{ "\u21a9\ufe0f" }} Назад в меню:/to_cp'
+  id: 7c1462c328234f61b946a063d6fa5336
+- alias: IK - Telegram - server check status
+  trigger:
+    platform: event
+    event_type: telegram_callback
+    event_data:
+      data: /servak
+  action:
+  - service: telegram_bot.edit_message
+    data_template:
+      message_id: last
+      chat_id: '{{ trigger.event.data.user_id }}'
+      title: ' * Что с сервером? *'
+      message: "Запущен - {{ states('sensor.last_boot') }} \nОбновление - {{ states('binary_sensor.updater')
+        }} \nТемпература сервера - {{ states('sensor.processor_temperature') }} \nЗаполненность
+        диска - {{ states('sensor.disk_use_percent') }}\n"
+      inline_keyboard:
+      - '{{ "\u21a9\ufe0f" }} Назад в меню:/to_cp'
+        id: b45e4089d3614a5a9d9824050bb8442b

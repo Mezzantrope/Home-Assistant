@@ -1,0 +1,121 @@
+svet:
+  automation:
+    - id: "1635865168823"
+      alias: "АВТ: Свет в ванной 2"
+      description: "Включение подсветки зеркала в с/у 2 этажа"
+      trigger:
+        - platform: device
+          domain: mqtt
+          device_id: 22d01b7d7b9b839e5da4fe41bcb615fe
+          type: action
+          subtype: single
+          discovery_id: 0x00158d0006b22172 action_single
+      condition: []
+      action:
+        - type: toggle
+          device_id: 29d46ccacef4eee82c82b774e71acb8c
+          entity_id: switch.0x00158d0006ec54a6_l2
+          domain: switch
+      mode: single
+
+    - id: "1650097352476"
+      alias: "!АВТ: свет крыльца улицы"
+      description: "Виртуальный выключатель света над фронтальным крыльцом"
+      trigger:
+        - platform: device
+          type: changed_states
+          device_id: d1ea2a2964c547165237f05f6aaa1881
+          entity_id: switch.0xa4c138904ab7ead0
+          domain: switch
+      condition: []
+      action:
+        - choose:
+            - conditions:
+                - condition: state
+                  entity_id: light.smart_bulb_600hz
+                  state: "off"
+              sequence:
+                - service: light.turn_on
+                  data:
+                    entity_id: light.smart_bulb_600hz
+            - conditions:
+                - condition: state
+                  entity_id: light.smart_bulb_600hz
+                  state: "on"
+              sequence:
+                - service: light.turn_off
+                  entity_id:
+                    - light.smart_bulb_600hz
+      mode: single
+
+    - id: "1650341949580"
+      alias: "АВТ: Новый час кухня свет"
+      description: "Моргание подсветки кухни ежечасно"
+      trigger:
+        - platform: time_pattern
+          hours: 07
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: 08
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: 09
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "10"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "11"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "12"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "13"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "14"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "15"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "16"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "17"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "18"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "19"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "20"
+          minutes: "00"
+          seconds: "00"
+        - platform: time_pattern
+          hours: "21"
+          minutes: "00"
+          seconds: "00"
+      condition: []
+      action:
+        - device_id: d79d3f1c4a967e0dfb9ed88ffe7075c8
+          domain: light
+          entity_id: light.0x588e81fffeba2ae5
+          type: flash
+      mode: single

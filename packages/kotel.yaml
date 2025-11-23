@@ -1,0 +1,87 @@
+kotel:
+  automation:
+    - alias: "ИНФ: Котёл шалит"
+      description: "ИНФ: Котёл не понял что надо греть!"
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.kotel_delta
+          above: 20
+          for: "01:00:00"
+
+      action:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_warn
+          message: >-
+            Котёл не хочет греть. ПРОВЕРЬ!
+      mode: single
+
+    - alias: "ИНФ: Ошибка котла"
+      description: "ИНФ: Котёл отключился по ошибке!"
+      trigger:
+        - platform: state
+          entity_id: sensor.1_gb_fault
+
+      action:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_warn
+          message: >-
+            Котёл отключился с ошибкой E {{states('sensor.1_gb_fault_code') }};
+      mode: single
+
+    - id: "1710327666676_2"
+      alias: "АВТ: КОТЁЛ: Сообщение котлу средней температуры"
+      description: "посылает в котёл среднежилую Т"
+      trigger:
+        - platform: time_pattern
+          minutes: "/3"
+      condition: []
+      action:
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: >
+                    {{ states('sensor.average_temperature') in ['unknown', 'unavailable', 'none'] }}
+              sequence:
+                - service: telegram_bot.send_message
+                  data:
+                    config_entry_id: !secret telegram_entry_id_info
+                    target:
+                      - !secret chat_warn
+                    message: >
+                      ВНИМАНИЕ: sensor.average_temperature недоступен ({{ states('sensor.average_temperature') }})
+          default:
+            - service: mqtt.publish
+              data:
+                topic: gazzz/controller/set
+                payload: >
+                  {"ein": {{ states("sensor.average_temperature") | float }}}
+                retain: true
+      mode: single
+
+    - id: "1710328000001"
+      alias: "АВТ: КОТЁЛ: Контроль контроль параметра _room"
+      description: "При TRUE — отправляет команду выключения _room"
+      trigger:
+        - platform: mqtt
+          topic: gazzz/controller/reports
+
+      condition:
+        - condition: template
+          value_template: >
+            {% set j = trigger.payload_json %}
+            {{ j is mapping and j.get('_room') == true }}
+
+      action:
+        - service: mqtt.publish
+          data:
+            topic: gazzz/controller/set
+            payload: '{"_room": false}'
+            retain: false
+
+      mode: single

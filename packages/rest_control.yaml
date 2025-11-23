@@ -1,0 +1,63 @@
+rest_control:
+  sensor:
+    - platform: rest
+      resource: http://192.168.104.75:8123/api/states/sensor.online_custom
+      name: reserve_state
+      force_update: true
+      headers:
+        Authorization: !secret reserve_token
+        content-type: "application/json"
+      value_template: "{{ value_json.state }}"
+
+    #         - platform: rest
+    #           resource: http://192.168.104.75:8123/api/states/sensor.townhouse_temp_avg
+    #           name: townhouse_temp_avg2
+    #           force_update: true
+    #           headers:
+    #             Authorization: !secret reserve_token
+    #             content-type: 'application/json'
+    #           value_template: '{{ value_json.state }}'
+    #           unit_of_measurement: "°C"
+    #
+    #         - platform: rest
+    #           resource: http://192.168.104.75:8123/api/states/sensor.processor_temperature
+    #           name: alt_proc_temp
+    #           force_update: true
+    #           headers:
+    #             Authorization: !secret reserve_token
+    #             content-type: 'application/json'
+    #           value_template: '{{ value_json.state }}'
+    #           unit_of_measurement: "°C"
+
+    - platform: template
+      sensors:
+        reserve_status:
+          value_template: >
+            {% if is_state("sensor.reserve_state", "unavailable") -%}
+               Альтернативный сервер не доступен!
+             {%- else -%}
+               Альт сервер работоспособен
+            {%- endif %}
+
+  automation:
+    - id: alt_server_monitoring
+      description: "ИНФ: Система мониторинга состояния альтернативного сервера"
+      mode: single
+      trigger:
+        - platform: state
+          entity_id:
+            - sensor.reserve_state
+          to: unavailable
+          for:
+            hours: 0
+            minutes: 0
+            seconds: 30
+      condition: []
+      action:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_info
+          message: >-
+            Главный сервер сообщает: Альтернативный сервер отключён!

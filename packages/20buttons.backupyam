@@ -1,0 +1,391 @@
+# 20buttons:
+
+
+#     automation:
+    
+# #   Example to change
+
+# # alias: "!!!! Кнопка 1 на пульте"
+# # description: ""
+# # trigger:
+# #   - platform: device
+# #     domain: mqtt
+# #     device_id: 192cb939f0b9f1d67d32395710610444
+# #     type: action
+# #     subtype: button_1_single
+# #     discovery_id: 0x00124b0011d4c766 action_button_1_single
+# # condition: []
+# # action:
+# #   - service: media_player.play_media
+# #     target:
+# #       entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+# #     data:
+# #       media_content_id: >-
+# #         media-source://tts/yandex_station?message=%D0%9F%D1%80%D0%BE%D0%B3%D0%BD%D0%BE%D0%B7+%D0%BF%D0%BE%D0%B3%D0%BE%D0%B4%D1%8B+%D0%BD%D0%B0+%D1%81%D0%B5%D0%B3%D0%BE%D0%B4%D0%BD%D1%8F
+# #       media_content_type: command
+# #     metadata:
+# #       title: Прогноз погоды на сегодня
+# #       thumbnail: https://brands.home-assistant.io/_/automation/icon.png
+# #       media_class: app
+# #       children_media_class: null
+# #       navigateIds:
+# #         - {}
+# #         - media_content_type: command
+# #           media_content_id: >-
+# #             media-source://tts/yandex_station?message=%D0%9F%D1%80%D0%BE%D0%B3%D0%BD%D0%BE%D0%B7+%D0%BF%D0%BE%D0%B3%D0%BE%D0%B4%D1%8B+%D0%BD%D0%B0+%D1%81%D0%B5%D0%B3%D0%BE%D0%B4%D0%BD%D1%8F
+# # mode: single
+
+
+
+
+    
+#       - id: 356138095132351
+#         alias: Button 1 
+#         description: "Действие кнопки пульта №1 - прогноз от Алисы"
+#         trigger:
+#           - platform: state
+#             entity_id: select.20_buttons_switch_actions_button_1
+            
+#         action:
+#           - service: media_player.volume_set
+#             data:
+#               volume_level: 0.5
+#             target:   
+#               entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+
+#           - service: media_player.play_media
+#             data:
+#               media_content_id: Прогноз погоды на сегодня
+#               media_content_type: command
+#             target:               
+#               entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+
+#         mode: single
+
+
+#     #   - id: 356138095132352
+#     #     alias: Button 2
+#     #     description: "Действие кнопки пульта №2 - левый светильник"
+#     #     trigger:
+#     #       platform: device
+#     #       domain: mqtt
+#     #       device_id: 192cb939f0b9f1d67d32395710610444
+#     #       type: action
+#     #       subtype: button_2_single
+#     #       discovery_id: 0x00124b0011d4c766 action_button_2_single
+            
+          
+#     #     action:
+#     #         - choose:
+#     #           - conditions:
+#     #               - condition: state
+#     #                 entity_id: switch.100104b5a2
+#     #                 state: 'off'
+#     #             sequence:
+#     #               - service: switch.turn_on
+#     #                 data:
+#     #                   entity_id: switch.100104b5a2
+#     #           - conditions:
+#     #               - condition: state
+#     #                 entity_id: switch.100104b5a2
+#     #                 state: 'on'
+#     #             sequence:
+#     #               - service: switch.turn_off
+#     #                 entity_id: switch.100104b5a2
+#     #     mode: single                 
+        
+#       - id: 356138095132353
+#         alias: Button 3
+#         description: "Действие кнопки пульта №3 - правый светильник"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_3_single'
+          
+#         action:
+#             - choose:
+#               - conditions:
+#                   - condition: state
+#                     entity_id: switch.1001041b87
+#                     state: 'off'
+#                 sequence:
+#                   - service: switch.turn_on
+#                     data:
+#                       entity_id: switch.1001041b87
+#               - conditions:
+#                   - condition: state
+#                     entity_id: switch.1001041b87
+#                     state: 'on'
+#                 sequence:
+#                   - service: switch.turn_off
+#                     entity_id: switch.1001041b87
+#         mode: single                         
+
+# #  пропущена кнопка 4!
+
+
+# # управление в спальне
+
+#       - id: 356138095132355
+#         alias: Button 5
+#         description: "Действие кнопки пульта №5 - шторы спальни - открыть "
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_5_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.curtain_bedroom
+#             data:
+#               position: 80
+#         mode: single                         
+
+#       - id: 356138095132356
+#         alias: Button 6
+#         description: "Действие кнопки пульта №6 - шторы спальни - закрыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_6_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.curtain_bedroom
+#             data:
+#               position: 0
+#         mode: single                         
+
+#       - id: 356138095132357
+#         alias: Button 7
+#         description: "Действие кнопки пульта №7 - форточка спальни - закрыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_7_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.drivent_69f
+#             data:
+#               position: 0
+#         mode: single                         
+
+#       - id: 356138095132358
+#         alias: Button 8
+#         description: "Действие кнопки пульта №7 - форточка спальни - открыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_8_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.drivent_69f
+#             data:
+#               position: 100
+#         mode: single                            
+        
+# # управление у Андрея
+
+#       - id: 356138095132359
+#         alias: Button 9
+#         description: "Действие кнопки пульта №9 - шторы Андрея - открыть "
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_9_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.curtain_andrey
+#             data:
+#               position: 80
+#         mode: single                         
+
+#       - id: 3561380951323510
+#         alias: Button 10
+#         description: "Действие кнопки пульта №10 - шторы Андрея - закрыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_10_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.curtain_andrey
+#             data:
+#               position: 0
+#         mode: single                         
+
+#       - id: 3561380951323511
+#         alias: Button 11
+#         description: "Действие кнопки пульта №11 - форточка Андрея - закрыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_11_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.drivent_d16
+#             data:
+#               position: 0
+#         mode: single                         
+
+#       - id: 3561380951323512
+#         alias: Button 12
+#         description: "Действие кнопки пульта №12 - форточка Андрея - открыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_12_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.drivent_d16
+#             data:
+#               position: 100
+#         mode: single                  
+        
+# # управление у Агаты
+
+#       - id: 3561380951323513
+#         alias: Button 13
+#         description: "Действие кнопки пульта №13 - шторы Агаты - открыть "
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_13_single'
+          
+#         action:
+#             service: cover.set_cover_position
+#             data:
+#               position: 80
+#             target:
+#               entity_id: 
+#                 - cover.curtain_agata_1
+#                 - cover.curtain_agata_2            
+#         mode: single                         
+
+#       - id: 3561380951323514
+#         alias: Button 14
+#         description: "Действие кнопки пульта №14 - шторы Агаты - закрыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_14_single'
+          
+#         action:
+#             service: cover.close_cover
+#             data: {}
+#             target:
+#               entity_id: 
+#                 - cover.curtain_agata_1
+#                 - cover.curtain_agata_2            
+#         mode: single                         
+
+#       - id: 3561380951323515
+#         alias: Button 15
+#         description: "Действие кнопки пульта №15 - форточка Агаты - закрыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_15_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.drivent_6b4
+#             data:
+#               position: 0
+#         mode: single                         
+
+#       - id: 3561380951323516
+#         alias: Button 16
+#         description: "Действие кнопки пульта №16 - форточка Андрея - открыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_16_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.drivent_6b4
+#             data:
+#               position: 100
+#         mode: single                  
+
+# # управление у Артёма
+
+#       - id: 3561380951323517
+#         alias: Button 17
+#         description: "Действие кнопки пульта №17 - шторы Артёма - открыть "
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_17_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.curtain_artem
+#             data:
+#               position: 80
+#         mode: single                         
+
+#       - id: 3561380951323518
+#         alias: Button 18
+#         description: "Действие кнопки пульта №18 - шторы Артёма - закрыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_18_single'
+          
+#         action:
+#           - service: cover.close_cover
+#             data: {}
+#             target:
+#               entity_id: cover.curtain_artem
+#         mode: single                         
+
+#       - id: 3561380951323519
+#         alias: Button 19
+#         description: "Действие кнопки пульта №19 - форточка Артёма - закрыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_19_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.drivent_b62
+#             data:
+#               position: 0
+#         mode: single                         
+
+#       - id: 356138095132320
+#         alias: Button 20
+#         description: "Действие кнопки пульта №20 - форточка Артёма - открыть"
+#         trigger:
+#           - platform: state
+#             entity_id: sensor.20_buttons_action
+#             to: 'button_20_single'
+          
+#         action:
+#           - service: cover.set_cover_position
+#             target:
+#               entity_id: cover.drivent_b62
+#             data:
+#               position: 100
+#         mode: single                 

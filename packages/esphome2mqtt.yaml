@@ -1,0 +1,20 @@
+esphome2mqtt:
+
+# sensor.0temperature_010_temp
+
+  automation:
+
+     - id: '12165498755'
+       alias: 'АВТ: ESPHOME: Сообщение температуры горячей воды'
+       description: посылает в MQTT Т горячей воды
+       trigger:
+       - platform: time_pattern
+         minutes: '/3'
+       condition: []
+       action:
+       - service: mqtt.publish
+         data:
+           topic: esphome/data/set
+           payload: '{"tgv":{{states(''sensor.0temperature_010_temp'') }}}'
+           retain: true
+       mode: single

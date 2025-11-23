@@ -1,0 +1,72 @@
+lux:
+
+  template:
+    # 1) Бинарный сенсор "дневное время" — Солнце выше горизонта
+    - binary_sensor:
+        - name: is_daylight
+          unique_id: is_daylight
+          device_class: light
+          state: >
+            {{ state_attr('sun.sun','elevation')|float(0) > 0 }}
+  
+    # 2) Lux "только днём" — ночью отдаёт unknown (статистика их не учитывает)
+    - sensor:
+        - name: lux_daytime_only
+          unique_id: lux_daytime_only
+          device_class: illuminance
+          state_class: measurement
+          unit_of_measurement: lx
+          state: >
+            {% if is_state('binary_sensor.is_daylight','on') %}
+              {{ states('sensor.esphome_web_da9c3e_tcs34725_illuminance')|float(0) }}  
+            {% else %}
+              unknown
+            {% endif %}
+  
+  sensor:
+    # 3) Текущее среднее за световой период (скользящее окно 24 ч, но учитывает только дневные точки)
+    - platform: statistics
+      name: daylight_lux_mean_current
+      entity_id: sensor.lux_daytime_only
+      state_characteristic: mean
+      sampling_size: 100000
+      max_age:
+        hours: 24
+  
+  input_number:
+    # 4) Итоговое среднее за день (фиксируется на закате)
+    daily_lux_mean:
+      name: "Средняя освещённость за день (окончательная)"
+      min: 0
+      max: 200000
+      step: 1
+      unit_of_measurement: lx
+      icon: mdi:white-balance-sunny
+  
+  automation:
+    # 5) На закате сохраняем итог дня в helper
+    - id: save_daily_lux_mean_at_sunset
+      alias: "Сохранить среднюю освещённость дня на закате"
+      trigger:
+        - platform: sun
+          event: sunset
+      action:
+        - service: input_number.set_value
+          target:
+            entity_id: input_number.daily_lux_mean
+          data:
+            value: >
+              {{ states('sensor.daylight_lux_mean_current')|float(0) }}
+  
+    # (Опционально) Сбрасывать отображение перед новым днём
+    # - id: reset_daily_lux_mean_at_sunrise
+    #   alias: "Сбросить итог перед новым днём (на рассвете)"
+    #   trigger:
+    #     - platform: sun
+    #       event: sunrise
+    #   action:
+    #     - service: input_number.set_value
+    #       target:
+    #         entity_id: input_number.daily_lux_mean
+    #       data:
+    #         value: 0  

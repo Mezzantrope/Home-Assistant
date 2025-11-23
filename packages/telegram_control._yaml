@@ -1,0 +1,856 @@
+telegram_control:
+    
+    template:
+
+      - sensor:
+
+          - name: admin_1
+            state: 700301
+            
+          - name: user_anna
+            state: 121448139
+            
+          - name: user_andrey
+            state: 275483003
+
+#          - name: user_agata
+#            state:             
+
+
+
+    automation:
+
+      - id: Запрос состояния системы
+        alias: system_status_query
+        initial_state: true
+        trigger:
+          - platform: event
+            event_type: telegram_text
+        condition:
+          - condition: template
+            value_template: >-
+              {{ trigger.event.data.text in ["Как дела", "как дела", "Отчет", "отчет", "Статус", "статус"] }}
+        action:
+          - service: notify.me
+            data:
+              target: "{{ trigger.event.data.user_id }}"
+              message: | 
+                   {{"\U0001F4AC"}} Основной сервер Raspberry Pi 4 B 8GB
+                   {{"\U0001F503"}} Режим управления - {{ states('switch.control_mode') }} 
+                   {{"\U0001F4A1"}} Светильников недоступно - {{states.light | selectattr ('state', 'equalto', 'unavailable') | list | length}} 
+                   {{"\U0001F50C"}} Реле недоступно - {{states.switch | selectattr ('state', 'equalto', 'unavailable') | list | length}} 
+                   {{"\U0001F321"}} Сенсоров недоступно - {{states.sensor | selectattr ('state', 'equalto', 'unavailable') | list | length}} 
+                   {{"\U0001F51F"}} Бинарных сенсоров недоступно - {{states.binary_sensor | selectattr ('state', 'equalto', 'unavailable') | list | length}}
+
+      - id: Определение ID
+        alias: telegram_id
+        initial_state: true
+        trigger:
+          - platform: event
+            event_type: telegram_text
+        condition:
+          - condition: template
+            value_template: >-
+              {{ trigger.event.data.text in ["whoami"] }}
+        action:
+          - service: telegram_bot.send_message
+            data_template:
+              target: "{{ trigger.event.data.chat_id }}"
+              message: |
+                Твой ID {{ trigger.event.data.user_id }}                   
+                
+##  Модуль распознавания пользователя.
+
+      - id: Кто я
+        alias: whoami
+        initial_state: true
+        trigger:
+          - platform: event
+            event_type: telegram_text
+        action:
+          - choose:
+              - conditions:      
+                  - condition: template
+                    value_template: >-
+                      {{ trigger.event.data.text in ["Кто я?",] }}
+                  - condition: template
+                    value_template: >
+                       {{ trigger.event.data.user_id == (states('sensor.admin_1')|int) }}
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      target: "{{ trigger.event.data.user_id }}"
+                      message: | 
+                           {{"\U0000270B"}} Привет, Павел, я тебя узнал, твой статус - Администратор, доступ - полный
+              - conditions:      
+                  - condition: template
+                    value_template: >-
+                      {{ trigger.event.data.text in ["Кто я?",] }}
+                  - condition: template
+                    value_template: >
+                       {{ trigger.event.data.user_id == (states('sensor.user_andrey')|int) }}
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      target: "{{ trigger.event.data.user_id }}"
+                      message: | 
+                           {{"\U0000270B"}} Привет, Андрей, я тебя узнал, твой статус - Пользователь, доступ - информационный.                
+              - conditions:      
+                  - condition: template
+                    value_template: >-
+                      {{ trigger.event.data.text in ["Кто я?",] }}
+                  - condition: template
+                    value_template: >
+                       {{ trigger.event.data.user_id == (states('sensor.user_anna')|int) }}
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      target: "{{ trigger.event.data.user_id }}"
+                      message: | 
+                           {{"\U0000270B"}} Привет, Анечка, я тебя узнал, твой статус - супруга админа, доступ - информационный.                
+                           
+## Формирование меню
+
+      - id: Вызов меню управления телеграм
+        alias: telegram_menu_start
+        initial_state: true
+        trigger:
+          - platform: event
+            event_type: telegram_text
+        condition:
+          - condition: template
+            value_template: >-
+              {{ trigger.event.data.text in ["куку", "Куку", "Rere", "rere", "Привет", "привет", "Ghbdtn", "ghbdtn"] }}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                       {{ trigger.event.data.user_id == (states('sensor.admin_1')|int) }}
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      target: "{{ trigger.event.data.user_id }}"
+                      message: |
+                        Сделайте выбор :
+                      inline_keyboard: 
+                      - ' Температура:/room_temp ,  Углекислота:/gaz_co2'
+                      - ' Счётчики:/counter_control ,  Форточки:/windows_control'
+                      - ' Погреб:/basement_control ,  Котёл:/fire_control'
+                      - ' Перекличка:/presence_control ,  Сервер:/server_control'
+                      - ' Вода:/water_control ,  Расход:/other_control'                      
+                      - ' Настройка температуры котла:/menu_temp'
+                      - ' Убрать меню:/menu_hide'
+              - conditions:
+                  - condition: template
+                    value_template: >
+                       {{ trigger.event.data.user_id == (states('sensor.user_anna')|int) }}
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      target: "{{ trigger.event.data.user_id }}"
+                      message: |
+                         Сделай выбор :
+                      inline_keyboard: 
+                      - ' Температура:/room_temp ,  Углекислота:/gaz_co2'
+                      - ' Счётчики:/counter_control ,  Форточки:/windows_control'
+                      - ' Погреб:/basement_control ,  Котёл:/fire_control'
+                      - ' Перекличка:/presence_control ,  Сервер:/server_control'
+                      - ' Вода:/water_control ,  Расход:/other_control'                      
+                      - ' Настройка температуры котла:/menu_temp'
+                      - ' Убрать меню:/menu_hide'
+              - conditions:
+                  - condition: template
+                    value_template: >
+                       {{ trigger.event.data.user_id == (states('sensor.user_andrey')|int) }}
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      target: "{{ trigger.event.data.user_id }}"
+                      message: |
+                        Отчёт:  \n 
+                        
+                        Температура на улице:     {{states('sensor.1_gb_out_temp')| round(1) }} °С {% if is_state('binary_sensor.pos_outside_temp_trend', 'off') %} ↓ {%else %} ↑ {% endif %};
+                        Температура на первом:  {{states('sensor.room1_temp') }} ; 
+                        
+                        Темп у Андрея :     {{states('sensor.room21_temp') }} / {{states('sensor.andrey_room_min')| round(1)  }} °С;
+                        Темп у Агаты  :       {{states('sensor.room22_temp') }} ;
+                        Темп у Артёма :      {{states('sensor.room23_temp') }} ;
+                        
+                        Температура в спальне:    {{states('sensor.room31_temp') }} ;
+                        Температура в кинотеатре:    {{states('sensor.room4_temp') }} ;
+                        
+                        Давление QFE:        :       {{states('sensor.t104_1_2_pressure_mmhg')}} мм рт.ст.; 
+                        Давление QNH:        :     {{(((states('sensor.0x00124b0027250176_pressure'))|float(0))+22) }} мбар;
+          
+                        Нагнетатель:                   {{states('sensor.press_status')}};
+                        Давление воды:              {{states('sensor.0waterdata_pressure_atm')}} атмосферы;
+                        
+                        Температура холодной воды:  {{(states('sensor.cold_water_min')| round(1) )}} °С;
+                        Температура горячей воды:     {{(states('sensor.010_temp'))}} °С;
+                        Расход воды за вчера:  {{(states('sensor.cold_water_daily')|float(0)| round(0) )}} литров {% if is_state('binary_sensor.cold_water_trend', 'off') %} ↓ {% else %} ↑ {% endif %};
+                        
+                        Газовый котёл:                 {{states('sensor.gaz_status')}};
+                        Признак отказа котла:  {% if is_state('sensor.1_gb_fault','False')%}{{'Нет отказа'}}{%else %}{{'\\U000026A0','Отказ'}}{%endif %};
+                        Кубов газа за вчера:    {{ (state_attr('sensor.gas_daily_single','last_period')| float )  }} кубов;
+                        Т котла (задан/факт):  {{states('sensor.1_gb_temp_set')}} / {{states('sensor.1_gb_indicator_temp')| round(1) }} °С;
+                        
+                        Температура теплоносителя: {{states('sensor.1_1_kotel_out')}} °С;
+          
+                        Температура в погребе:    {{states('sensor.0x00158d00044a3476_temperature')| round(1) }} °С;
+                        Влажность в погребе:         {{states('sensor.0x00158d00044a3476_humidity')| round(1)  }}%;
+                        Люк погреба:              {{states('sensor.latch_status')}};
+          
+                        Температура в серверной:    {{states('sensor.0x00158d0003f470d5_temperature')| round(1) }} °С;
+                        Темп основного  процессора:  {{states('sensor.processor_temperature')}} °С;
+                        Темп альт процессора:     {{states('sensor.alt_proc_temp')}} °С;
+                        
+                        Занято диска:                           {{states('sensor.disk_use_percent')}} %;
+                        
+                        Тёплый пол:               {{states('sensor.warmfloor_status')}};
+                        Уровень дыма в  тауне:  {{states('sensor.0x00158d000632e673_smoke_density')}} единицы;
+                        
+                        АС: {{states('sensor.reserve_status')}}.
+                        
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back'                       
+
+                        
+#  # ## Автоматизация управления главным меню
+
+      - id: Главное меню управления телеграм
+        alias: telegram_menu_control
+        initial_state: true
+        trigger:
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/menu_hide'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}' 
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/menu_back'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: "{{ trigger.event.data.chat_id }}"
+                      message: |
+                        Сделай выбор :
+                      inline_keyboard: 
+                      - ' Температура:/room_temp ,  Углекислота:/gaz_co2'
+                      - ' Счётчики:/counter_control ,  Форточки:/windows_control'
+                      - ' Погреб:/basement_control ,  Котёл:/fire_control'
+                      - ' Перекличка:/presence_control ,  Сервер:/server_control'
+                      - ' Вода:/water_control ,  Расходники:/other_control'                      
+                      - ' Настройка температуры котла:/menu_temp'
+                      - ' Убрать меню:/menu_hide'
+
+#  #  #  Кнопка меню Температура
+
+      - id: Проверка температур, доступных к проверке.
+        alias: telegram_room_temp_menu_control
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/room_temp'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                        Доступные температуры :
+                        На улице:                  {{ states('sensor.1_gb_out_temp') }} °C, 
+                        Среднесуточная:       {{ states('sensor.1_gb_out_temp_avr') }} °C,
+                        
+                        Гостинная:              {{ states('sensor.1_gb_in_temp') }} °C,
+                        
+                        У Андрея:                {{ states('sensor.room21_temp') }},
+                        У Агаты:                   {{ states('sensor.room22_temp') }},
+                        У Артёма:                {{ states('sensor.room23_temp') }},
+                        
+                        В спальне:               {{ states('sensor.room31_temp') }},
+                        В гардеробе:          {{ states('sensor.0xa4c13811e6c1d967_temperature') }} °C,
+                        
+                        В кинотеатре:         {{ states('sensor.room4_temp') }},
+                        
+                        В погребе:               {{ states('sensor.0x00158d00044a3476_temperature') }} °C,
+
+                        Давление QFE:           {{states('sensor.t104_1_2_pressure_mmhg')}} мм рт. ст.,
+                        Давление QNH:           {{ (((states('sensor.0x00124b0027250176_pressure'))| float)+22)| round(1) }} мбар.
+ 
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/room_temp' 
+                        
+#  #  ## Кнопка меню Углекислота
+
+      - id: Проверка доступных сенсоров углекислоты.
+        alias: telegram_gaz_menu_co2
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/gaz_co2'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                        {{'\U0001FAC1'}} Доступные данные углекислого газа :
+                        
+                        Гостинная:              {{ states('sensor.0x00124b00231e19df_co2') }} ppm,
+                        У Андрея:                {{ states('sensor.0x00124b00272a6db8_co2') }} ppm,
+                        У Агаты:                   {{ states('sensor.0x00124b00272b9087_co2') }} ppm,
+                        У Артёма:                {{ states('sensor.0x00124b002725c63f_co2') }} ppm,
+                        В спальне:               {{ states('sensor.0x00124b0027250176_co2') }} ppm.
+ 
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/gaz_co2'
+                        
+#  # ### Кнопка меню Счётчики
+
+      - id: Проверка доступных счётчиков.
+        alias: telegram_menu_counter
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/counter_control'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                        {{'\U0001F3AB'}} Доступные данные счётчиков :
+                        
+                        Газ:                                       {{ states('sensor.gas_counter_sensor') }} кубов,
+                        Вода:                                     {{ states('sensor.cold_water_meter') }} м3,
+                        Воды с начала месяца:    {{ states('sensor.zhkh_water_abs') }} м3,
+                        Воды за вчера:                   {{ states('sensor.cold_water_daily') }} литров,
+                        Электроэнергия:               {{ states('sensor.elec_counter_real') }} кВт,
+                        Э/энергия с начала месяца: {{ states('sensor.zhkh_elec_abs') }} кВт,
+
+                        Сила тока моментальная:  {{ states('sensor.0xb4e3f9fffecfb25f_current') }} Ампер,
+                        Мощность потребляемая:  {{ states('sensor.0xb4e3f9fffecfb25f_power') }} Ватт;
+                        Сеть:      {{ states('sensor.0xb4e3f9fffecfb25f_voltage') }} Вольт.
+                        
+ 
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/counter_control'
+
+#  # ### Кнопка меню Форточки и Шторы
+
+      - id: Проверка положения форточек и штор.
+        alias: telegram_menu_windows
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/windows_control'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                        {{'\U0001FA9F'}}     Данные по форточкам :
+                        
+                        У Андрея:                     {% if is_state('cover.drivent_d16', 'closed') %} Закрыто {% else %}Открыто на {{ state_attr('cover.drivent_d16', 'current_position') }}% {% endif %}
+                        У Агаты:                       {% if is_state('cover.drivent_6b4', 'closed') %} Закрыто {% else %}Открыто на {{ state_attr('cover.drivent_6b4', 'current_position') }}% {% endif %}
+                        У Артёма:                    {% if is_state('cover.drivent_b62', 'closed') %} Закрыто {% else %}Открыто на {{ state_attr('cover.drivent_b62', 'current_position') }}% {% endif %}
+                        Окно спальни:             {% if is_state('cover.drivent_69f', 'closed') %} Закрыто {% else %}Открыто на {{ state_attr('cover.drivent_69f', 'current_position') }}% {% endif %}
+                        
+                                Данные по шторам:
+                        
+                        Штора у Андрея:                {% if is_state('cover.0x00158d00041ef76f', 'closed') %} Закрыта {% else %}Открыта на {{ state_attr('cover.curtain_andrey', 'current_position') }}% {% endif %}
+                        Двойная штора у Агаты:   {% if is_state('cover.0x00158d00045f2880', 'closed') %} Закрыта {% else %}Открыта на {{ state_attr('cover.curtain_agata_1', 'current_position') }}% {% endif %}
+                        Прикроватная  у Агаты:    {% if is_state('cover.0x00158d00045f0385', 'closed') %} Закрыта {% else %}Открыта на {{ state_attr('cover.curtain_agata_2', 'current_position') }}% {% endif %}
+                        Штора у Артёма:                {% if is_state('cover.0x00158d00045eb11c', 'closed') %} Закрыта {% else %}Открыта на {{ state_attr('cover.curtain_artem', 'current_position') }}% {% endif %}
+                        Штора спальни:                   {% if is_state('cover.0x00158d00042801b7', 'closed') %} Закрыта {% else %}Открыта на {{ state_attr('cover.curtain_bedroom', 'current_position') }}% {% endif %}
+
+                      inline_keyboard: 
+                        - 'Открыть шторы детям:/OpenCurtainsKids , Открыть шторы спальни:/OpenCurtainsBedroom'
+                        - 'Закрыть все шторы в доме:/CloseAllCurtains'
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/windows_control'                         
+                                                
+
+      - id: Закрыть все шторы
+        alias: curtain all close
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/CloseAllCurtains'' }}'
+                sequence:
+                  - service: cover.close_cover
+                    data: {}
+                    target:
+                      entity_id: 
+                         - cover.0x00158d00042801b7
+                         - cover.0x00158d00041ef76f
+                         - cover.0x00158d00045f2880
+                         - cover.0x00158d00045f0385
+                         - cover.0x00158d00045eb11c
+                  - delay:
+                      milliseconds: 1500
+
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  "Шторы закрыты"
+                      
+                      inline_keyboard: 
+                        - 'Открыть шторы детям:/OpenCurtainsKids , Открыть шторы спальни:/OpenCurtainsBedroom'
+                        - 'Закрыть все шторы в доме:/CloseAllCurtains'
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/windows_control'                         
+
+      - id: Открыть шторы детей
+        alias: Kids curtains open
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/OpenCurtainsKids'' }}'
+                sequence:
+                  - service: cover.set_cover_position
+                    data:
+                      position: 80
+                    target:
+                      entity_id: 
+                         - cover.0x00158d00041ef76f
+                         - cover.0x00158d00045f2880
+                         - cover.0x00158d00045f0385
+                         - cover.0x00158d00045eb11c
+                  - service: cover.set_cover_position
+                    data:
+                      position: 100
+                    target:
+                      entity_id: 
+                         - cover.curtain_artem
+                  - delay:
+                      milliseconds: 1500
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  "Шторы детей открыты"
+                      
+                      inline_keyboard: 
+                        - 'Открыть шторы детям:/OpenCurtainsKids , Открыть шторы спальни:/OpenCurtainsBedroom'
+                        - 'Закрыть все шторы в доме:/CloseAllCurtains'
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/windows_control'                         
+
+      - id: Открыть шторы спальни
+        alias: Our curtains open
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/OpenCurtainsBedroom'' }}'
+                sequence:
+                  - service: cover.set_cover_position
+                    data:
+                      position: 80
+                    target:
+                      entity_id: 
+                         - cover.0x00158d00042801b7
+                  - delay:
+                      milliseconds: 1500
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  "Шторы спальни открыты"
+                      
+                      inline_keyboard: 
+                        - 'Открыть шторы детям:/OpenCurtainsKids , Открыть шторы спальни:/OpenCurtainsBedroom'
+                        - 'Закрыть все шторы в доме:/CloseAllCurtains'
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/windows_control'                         
+
+#  # ### Кнопка меню Погреб
+
+      - id: Проверка датчиков погреба.
+        alias: telegram_menu_basement
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/basement_control'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                        {{'\U0001F573'}} Доступные данные по погребу :
+                        
+                        Температура:                 {{ states('sensor.0temp_wire') }} градусов C,
+                        Влажность:                     {{ states('sensor.0humid_wire') }} %,
+                        Люк в погреб:               {{states('sensor.latch_status')}},
+                        Протечка воды:           {% if is_state('binary_sensor.0x00158d0006e97966_water_leak', 'off') %} Нет протечки {% else %} {{'\U0001F7E5'}} Протечка {% endif %},
+                        Давление воды:            {{ states('sensor.0waterdata_pressure_atm') }} атмосферы,
+                        
+                        Приточная вентиляция:   {% if is_state('switch.0x00158d0007e6b7a0_l1', 'on') %} Включена на полную{% elif is_state('switch.0x00158d0007e6b7a0_l2', 'on') %} Включена на малую{% else %}Выключена {% endif %},
+                        Вытяжка:                                 {% if is_state('switch.0x00158d0007ef78b9_l2', 'on') %} Включена на полную{% elif is_state('switch.0x00158d0007ef78b9_l1', 'on') %} Включена на малую{% else %}Выключена {% endif %},
+                        
+                        Питание газ котла:        {{states('sensor.gaz_status')}},
+                        Питание п/сушит:          {{states('sensor.towel_status')}},
+                        Питание тёп пола:         {{states('sensor.warmfloor_status')}},
+                        Питание нагнетателя:  {{states('sensor.press_status')}},
+                        Питание Нептуна:          {{states('sensor.neptun_status')}}.
+
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/basement_control'
+                        
+#  # ### Кнопка меню контроля работы котла
+
+      - id: Проверка датчиков котла.
+        alias: telegram_menu_fire_kettle
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/fire_control'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                        {{'\U0001F525'}} Доступные данные по работе котла :
+                        
+                        Режим зима/лето:        {% if is_state('sensor.1_gb_summer_mode', 'False') %} {{'\U00002744'}}   Зима {% else %} {{'\U00002600'}} Лето {% endif %}
+                        Среднесуточная T:      {{ states('sensor.1_gb_out_temp_avr') }} °C,
+                        
+                        Задатчик Т:                       {{ states('sensor.1_gb_temp_set') }} °C,
+                        Фактически:                     {{ states('sensor.1_gb_indicator_temp') | round(1) }} °C,
+                        Дельта:                               {{ states('sensor.kotel_delta') }} °C,
+                        
+                        Теплоноситель:                  {{ states('sensor.1_1_kotel_out') }} °C,
+                        Батареи обратка:              {{ states('sensor.1_1_battery_out') }} °C,
+                        ТП обратка:                         {{ states('sensor.1_1_warm_floor_out') }} °C,
+                        
+                        Наличие ошибок:                 {% if is_state('sensor.1_gb_fault', 'False') %} Нет отказа {% else %} {{'\U0001F7E5'}} Отказ, код: {{ states('sensor.1_gb_fault_code') }}  {% endif %}
+                        
+                        Режим управления:               {{ states('sensor.1_gb_mode') }}/4
+                        
+                        Система отопления:    {% if is_state('sensor.1_gb_status_co_tick', 'True') %} Активна {% else %} {{'\U0001F7E5'}} !Пассив! {% endif %} {% if is_state('sensor.1_gb_status_co', 'True') %} {{'\U0001F7E2'}} {% else %} {{'\U000026AA'}} {% endif %}
+                        Система ГВС:          {% if is_state('sensor.1_gb_status_gvs_tick', 'True') %} Активна {% else %} {{'\U0001F7E5'}} !Пассив! {% endif %} {% if is_state('sensor.1_gb_status_gvs', 'True') %} {{'\U0001F7E2'}} {% else %} {{'\U000026AA'}} {% endif %}
+                        
+                        
+
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/fire_control'
+                        
+#  # ### Кнопка меню присутствия членов семьи дома
+
+      - id: Проверка кто живёт дома.
+        alias: telegram_menu_who_is_home
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/presence_control'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                        {{'\U0001FAC2'}} Посмотрим кто дома:
+                        
+                        Анечка:              {% if is_state('person.anna', 'home') %} Дома {% else %} Отсутствует {% endif %}
+                        Уезжала:             {{ states('sensor.anna_not_at_home_raz') }} раз, 
+                        Отсутствовала:  {{ states('sensor.anna_not_at_home') }} часов.
+                        
+                        Андрей: {% if is_state('person.andrey', 'home') %} Дома {% else %} Отсутствует {% endif %}
+                        
+                        Агата: {% if is_state('person.agata', 'home') %} Дома {% else %} Отсутствует {% endif %}
+                        
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/presence_control'
+                        
+#  # ### Кнопка меню проверки сервера
+
+      - id: Проверка данных сервера.
+        alias: telegram_menu_server
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/server_control'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message: |
+                        По серверу Home Assistant:
+                        
+                        Текущая версия прошивки:            {{ state_attr('update.home_assistant_core_update', 'installed_version') }},
+                        Нужно обновить:                  {% if is_state('update.home_assistant_core_update', 'off') %} Не требуется {% else %} {{'\U0001F7E5'}} Вышла новая прошивка {% endif %},
+                        
+                        Температура процессора:             {{ states('sensor.processor_temperature') }} °C,
+                        Загрузка процессора:                        {{ states('sensor.processor_use') }} %,
+                        Заполнено диска:                             {{ states('sensor.disk_use_percent') }} %,
+                        Статус по питанию:         {% if is_state('binary_sensor.rpi_power_status', 'off') %} Проблем нет {% else %} !Есть сбои {% endif %},
+                        
+                        Альт сервер:
+                        
+                        Температура процессора:             {{ states('sensor.alt_proc_temp') }} °C,
+                        Заполнено диска:                             {{ states('sensor.alt_disk_free') }} %,
+                        Статус по питанию:         {% if is_state('sensor.alt_power_fail', 'off') %} Проблем нет {% else %} !Есть сбои {% endif %}.
+                    
+                      inline_keyboard: 
+                        - ' Вернуться:/menu_back ,  Обновить:/server_control'
+                        
+#  # ### Кнопка меню по воде
+
+      - id: Проверка данных водоснабжения
+        alias: telegram_menu_water_2
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/water_control'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                        По водоснабжению:
+                        
+                        Давление воды:                  {{ states('sensor.0waterdata_pressure_atm') }} атм,
+                        
+                        Температура холодной воды:   {{ states('sensor.cold_water_min') }} / {{ states('sensor.011_temp') }} °C,
+                        Температура горячей воды:     {{ states('sensor.010_temp') }} °C,
+                        
+                        Расход воды за вчера:           {{ states('sensor.cold_water_daily') }} литров,
+                        
+                        Протечка в погребе:        {% if is_state('binary_sensor.0x00158d0006e97966_water_leak', 'off') %} Нет протечки {% else %} {{'\U0001F7E5'}} Протечка {% endif %},
+                        
+                        Протечка в бойлерной:   {% if is_state('binary_sensor.0x00158d0002774dd5_water_leak', 'off') %} Нет протечки {% else %} {{'\U0001F7E5'}} Протечка {% endif %},
+                        Протечка с/у 1 этажа:      {% if is_state('binary_sensor.0x00158d0006c5d8e0_water_leak', 'off') %} Нет протечки {% else %} {{'\U0001F7E5'}} Протечка {% endif %},
+                        Протечка под кухней:      {% if is_state('binary_sensor.0x00158d0006e97966_water_leak', 'off') %} Нет протечки {% else %} {{'\U0001F7E5'}} Протечка {% endif %},
+                        
+                        Протечка с/у 2 под ванной: {% if is_state('binary_sensor.0x00158d00049e786a_water_leak', 'off') %} Нет протечки {% else %} {{'\U0001F7E5'}} Протечка {% endif %},
+                        Протечка с/у 2 стирал:   {% if is_state('binary_sensor.0x00158d000271ba87_water_leak', 'off') %} Нет протечки {% else %} {{'\U0001F7E5'}} Протечка {% endif %},
+                        
+                        Протечка с/у 3 этажа:       {% if is_state('binary_sensor.0x00158d00049e7b45_water_leak', 'off') %} Нет протечки {% else %} {{'\U0001F7E5'}} Протечка {% endif %}.
+                        
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/water_control'    
+                        
+#  # ### Кнопка меню настройки температуры котла
+
+      - id: настройка температуры котла в телеграм боте.
+        alias: telegram_menu_temp_service
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/menu_temp'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message: &msg_en |
+                        {{'\U0001F5B3'}} Выбери температуру:
+                        
+                        Режим зима/лето:        {% if is_state('sensor.1_gb_summer_mode', 'False') %} {{'\U00002744'}}   Зима {% else %} {{'\U00002600'}} Лето {% endif %}
+                        Задатчик Т:                       {{ states('sensor.1_gb_temp_set') }} °C,
+                        Фактически:                     {{ states('sensor.1_gb_indicator_temp') | round(1) }} °C,
+                        Дельта:                               {{ states('sensor.kotel_delta') }} °C,
+                        Система отопления:    {% if is_state('sensor.1_gb_status_co_tick', 'True') %} Активна {% else %} {{'\U0001F7E5'}} !Пассив! {% endif %}
+                        Система ГВС:                  {% if is_state('sensor.1_gb_status_gvs_tick', 'True') %} Активна {% else %} {{'\U0001F7E5'}} !Пассив! {% endif %}
+                        
+                      inline_keyboard: 
+                        # - '40 град:/menu_40 , 50 град:/menu_50 , 60 град:/menu_60'
+ #                       - 'Переключить СО:/SwitchCO'
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/menu_temp'    
+
+    #   - id: Переключает режим котла СО
+    #     alias: CO mode switching
+    #     initial_state: true
+    #     trigger: 
+    #      - platform: event
+    #       event_type: telegram_callback
+    #       event_data: {}
+    #     action:
+    #      - choose:
+    #          - conditions:
+    #               - condition: template
+    #                 value_template: '{{ trigger.event.data.command == ''/SwitchCO'' }}'
+    #           sequence:
+    #               - service: mqtt.publish
+    #                 data:
+    #                 topic: gazzz/controller/set
+    #                 qos: "0"
+    #                 payload: {\"_chena\":false}
+    #               - delay:
+    #                   milliseconds: 500
+    #               - service: telegram_bot.send_message
+    #                 data:
+    #                   target: '{{ trigger.event.data.chat_id }}'
+    #                   message:  "Система отопления переключена"
+                      
+    #                   inline_keyboard: 
+    #                     - '40 град:/menu_40 , 50 град:/menu_50 , 60 град:/menu_60'
+    #                     - 'Переключить СО:/SwitchCO'
+    #                     - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/menu_temp'    
+
+      - id: Проверка данных расходники
+        alias: telegram_menu_zhkh
+        initial_state: true
+        trigger: 
+          - platform: event
+            event_type: telegram_callback
+            event_data: {}
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ trigger.event.data.command == ''/other_control'' }}'
+                sequence:
+                  - service: telegram_bot.delete_message
+                    data_template:
+                      message_id: '{{ trigger.event.data.message.message_id }}'
+                      chat_id: '{{ trigger.event.data.chat_id }}'
+                  - service: telegram_bot.send_message
+                    data:
+                      target: '{{ trigger.event.data.chat_id }}'
+                      message:  |
+                         #жкх за {{states('sensor.month_rus')}}:
+                         
+                         Газ:       {{ (states('sensor.zhkh_gaz_abs')| float(0)) }} м3;
+                         прошлый месяц: {{ state_attr('sensor.zhkh_gaz_abs', 'last_period')}} м3;
+                         дельта: {{ (states('sensor.gas_delta')| float(0)) }} м3;
+                         затраты: {{ (states('sensor.zatraty_na_gaz')| float(0)) }} рублей.
+                         
+                         Эл-во:  {{ (states('sensor.zhkh_elec_abs')| float(0)) }} кВт;
+                         прошлый месяц: {{ state_attr('sensor.zhkh_elec_abs', 'last_period')}} кВт;
+                         дельта: {{ (states('sensor.sensor.elec_delta')| float(0)) }} м3;
+                         затраты: {{ (states('sensor.zatraty_na_svet')| float(0)) }} рублей.
+                         
+                         Вода:    {{ (states('sensor.zhkh_water_abs')| float(0)) }} м3;
+                         прошлый месяц: {{ state_attr('sensor.zhkh_water_abs', 'last_period')}} м3;
+                         дельта: {{ (states('sensor.sensor.water_delta')| float(0)) }} м3;
+                         затраты: {{ (states('sensor.zatraty_na_vodu')| float(0)) }} рублей.
+                         
+                         
+                         Общие затраты: {{ (states('sensor.zatraty_na_vsio')| float(0)) }} рублей.
+                        
+                      inline_keyboard: 
+                        - '{{''\U000021A9''}} Вернуться:/menu_back , {{''\U000021AA''}} Обновить:/other_control'    
+                        

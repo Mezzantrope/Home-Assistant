@@ -1,0 +1,22 @@
+telegram_test:
+  automation:
+    - id: test_telegram_notification
+      alias: "!ТЕСТ: Тест уведомления в Telegram"
+      mode: single
+
+      # Триггер тут формальный — запускать будешь вручную кнопкой "Выполнить"
+      trigger:
+        - platform: event
+          event_type: test_telegram_notification
+
+      condition: []
+
+      actions:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          message: >-
+            ✅ Тестовое уведомление из Home Assistant.
+            Время отправки: {{ now().strftime('%Y-%m-%d %H:%M:%S') }}.
+          target:
+            - !secret chat_warn

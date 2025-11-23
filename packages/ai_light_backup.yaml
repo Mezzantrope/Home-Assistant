@@ -1,0 +1,68 @@
+ai_light_backup:
+  automation:
+    alias: "Крыльцо: включить свет при обнаружении человека (Reolink)"
+    id: porch_light_on_person_reolink
+    mode: restart # при новом срабатывании перезапускаем таймер
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.front_motion
+        to: "on"
+
+    # Окно срабатывания: ПОСЛЕ заката +2ч И ДО рассвета -1ч (корректно работает через полночь)
+    condition:
+      - condition: sun
+        after: sunset
+        after_offset: "02:00:00"
+        before: sunrise
+        before_offset: "-01:00:00"
+
+    action:
+      # 1) Проверка доступности сущностей
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: >-
+                  {% set ents = ['binary_sensor.front_motion','light.smart_bulb_600hz'] %}
+                  {% set bad = [] %}
+                  {% for e in ents %}
+                    {% set s = states(e) %}
+                    {% if s in ['unknown','unavailable','None', None] %}
+                      {% set _ = bad.append(e ~ ' (' ~ s ~ ')') %}
+                    {% endif %}
+                  {% endfor %}
+                  {{ bad | length > 0 }}
+            sequence:
+              - service: notify.telegram
+                data:
+                  message: >-
+                    ⚠️ Автоматизация "Крыльцо" не выполнена: недоступны сущности —
+                    {% set ents = ['binary_sensor.front_motion','light.smart_bulb_600hz'] %}
+                    {% set bad = [] %}
+                    {% for e in ents %}
+                      {% set s = states(e) %}
+                      {% if s in ['unknown','unavailable','None', None] %}
+                        {% set _ = bad.append(e ~ ' (' ~ s ~ ')') %}
+                      {% endif %}
+                    {% endfor %}
+                    {{ bad | join(', ') if bad|length>0 else '—' }}
+              # Завершаем, не идём дальше
+              - stop: "Крыльцо: стоп — недоступные сущности"
+        default:
+          # 2) Сохраняем предыдущее состояние света, чтобы не выключить чужой сценарий
+          - variables:
+              _prev_light_state: "{{ states('light.smart_bulb_600hz') | lower }}"
+          # 3) Включаем свет
+          - service: light.turn_on
+            target:
+              entity_id: light.smart_bulb_600hz
+          # 4) Держим включённым 1 минуту (перезапускается при новом движении благодаря mode: restart)
+          - delay: "00:01:00"
+          # 5) Выключаем только если до этого свет был выключен
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ _prev_light_state == 'off' }}"
+                sequence:
+                  - service: light.turn_off
+                    target:
+                      entity_id: light.smart_bulb_600hz

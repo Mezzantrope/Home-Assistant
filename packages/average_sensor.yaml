@@ -1,0 +1,346 @@
+average_sensor:
+  # ===================================================================
+  # AVERAGE TEMPERATURE SENSOR PACKAGE
+  # ===================================================================
+  # Сенсор средней температуры по семи датчикам
+  # 
+  # Установка:
+  # 1. Создайте файл: config/packages/average_temperature.yaml
+  #    ИЛИ добавьте в configuration.yaml
+  # 2. Перезапустите Home Assistant
+  # ===================================================================
+  
+  # ВАРИАНТ 1: Через Template Sensor (рекомендуется)
+  # -------------------------------------------------------------------
+  template:
+    - sensor:
+        # Средняя температура (игнорирует недоступные датчики)
+        - name: "Average Temperature"
+          unique_id: average_temperature_sensor
+          unit_of_measurement: "°C"
+          device_class: temperature
+          state_class: measurement
+          icon: "mdi:thermometer"
+          
+          state: >
+            {% set sensors = [
+              'sensor.1_gb_in_temp',
+              'sensor.0x00124b00272a6db8_temperature_2',
+              'sensor.0x00124b00272b9087_temperature',
+              'sensor.0x00124b002725c63f_temperature',
+              'sensor.0x00124b0027250176_temperature',
+              'sensor.0xa4c138ade62a2cd7_temperature',
+              'sensor.0xa4c1382021036559_temperature'
+            ] %}
+            
+            {% set temperatures = sensors 
+              | map('states') 
+              | reject('in', ['unknown', 'unavailable', 'none']) 
+              | map('float', 0) 
+              | list %}
+            
+            {% if temperatures | length > 0 %}
+              {{ (temperatures | sum / temperatures | length) | round(1) }}
+            {% else %}
+              unavailable
+            {% endif %}
+          
+          # Атрибуты для диагностики
+          attributes:
+            available_sensors: >
+              {% set sensors = [
+                'sensor.1_gb_in_temp',
+                'sensor.0x00124b00272a6db8_temperature_2',
+                'sensor.0x00124b00272b9087_temperature',
+                'sensor.0x00124b002725c63f_temperature',
+                'sensor.0x00124b0027250176_temperature',
+                'sensor.0xa4c138ade62a2cd7_temperature',
+                'sensor.0xa4c1382021036559_temperature'
+              ] %}
+              {{ sensors 
+                | select('is_state', states) 
+                | reject('is_state', 'unknown') 
+                | reject('is_state', 'unavailable') 
+                | list | length }}
+            
+            min_temperature: >
+              {% set sensors = [
+                'sensor.1_gb_in_temp',
+                'sensor.0x00124b00272a6db8_temperature_2',
+                'sensor.0x00124b00272b9087_temperature',
+                'sensor.0x00124b002725c63f_temperature',
+                'sensor.0x00124b0027250176_temperature',
+                'sensor.0xa4c138ade62a2cd7_temperature',
+                'sensor.0xa4c1382021036559_temperature'
+              ] %}
+              {% set temperatures = sensors 
+                | map('states') 
+                | reject('in', ['unknown', 'unavailable', 'none']) 
+                | map('float', 0) 
+                | list %}
+              {% if temperatures | length > 0 %}
+                {{ temperatures | min | round(1) }}
+              {% else %}
+                unavailable
+              {% endif %}
+            
+            max_temperature: >
+              {% set sensors = [
+                'sensor.1_gb_in_temp',
+                'sensor.0x00124b00272a6db8_temperature_2',
+                'sensor.0x00124b00272b9087_temperature',
+                'sensor.0x00124b002725c63f_temperature',
+                'sensor.0x00124b0027250176_temperature',
+                'sensor.0xa4c138ade62a2cd7_temperature',
+                'sensor.0xa4c1382021036559_temperature'
+              ] %}
+              {% set temperatures = sensors 
+                | map('states') 
+                | reject('in', ['unknown', 'unavailable', 'none']) 
+                | map('float', 0) 
+                | list %}
+              {% if temperatures | length > 0 %}
+                {{ temperatures | max | round(1) }}
+              {% else %}
+                unavailable
+              {% endif %}
+            
+            temperature_range: >
+              {% set sensors = [
+                'sensor.1_gb_in_temp',
+                'sensor.0x00124b00272a6db8_temperature_2',
+                'sensor.0x00124b00272b9087_temperature',
+                'sensor.0x00124b002725c63f_temperature',
+                'sensor.0x00124b0027250176_temperature',
+                'sensor.0xa4c138ade62a2cd7_temperature',
+                'sensor.0xa4c1382021036559_temperature'
+              ] %}
+              {% set temperatures = sensors 
+                | map('states') 
+                | reject('in', ['unknown', 'unavailable', 'none']) 
+                | map('float', 0) 
+                | list %}
+              {% if temperatures | length > 0 %}
+                {{ (temperatures | max - temperatures | min) | round(1) }}
+              {% else %}
+                unavailable
+              {% endif %}
+            
+            sensor_details: >
+              {% set sensors = [
+                'sensor.1_gb_in_temp',
+                'sensor.0x00124b00272a6db8_temperature_2',
+                'sensor.0x00124b00272b9087_temperature',
+                'sensor.0x00124b002725c63f_temperature',
+                'sensor.0x00124b0027250176_temperature',
+                'sensor.0xa4c138ade62a2cd7_temperature',
+                'sensor.0xa4c1382021036559_temperature'
+              ] %}
+              {% set details = [] %}
+              {% for sensor in sensors %}
+                {% set state = states(sensor) %}
+                {% set name = state_attr(sensor, 'friendly_name') or sensor.split('.')[-1] %}
+                {% if state not in ['unknown', 'unavailable'] %}
+                  {% set details = details + [name ~ ': ' ~ state ~ '°C'] %}
+                {% else %}
+                  {% set details = details + [name ~ ': ' ~ state] %}
+                {% endif %}
+              {% endfor %}
+              {{ details | join(', ') }}
+  
+  
+  # ===================================================================
+  # ВАРИАНТ 2: Через Min/Max Integration (встроенная, проще)
+  # ===================================================================
+  # Раскомментируйте этот блок если хотите использовать встроенную интеграцию:
+  #
+  # sensor:
+  #   - platform: min_max
+  #     name: "Average Temperature (Min/Max)"
+  #     unique_id: average_temperature_minmax
+  #     type: mean  # mean = среднее, min = минимум, max = максимум
+  #     round_digits: 1
+  #     entity_ids:
+  #       - sensor.1_gb_in_temp
+  #       - sensor.0x00124b00272a6db8_temperature_2
+  #       - sensor.0x00124b00272b9087_temperature
+  #       - sensor.0x00124b002725c63f_temperature
+  #       - sensor.0x00124b0027250176_temperature
+  #       - sensor.0xa4c138ade62a2cd7_temperature
+  #       - sensor.0xa4c1382021036559_temperature
+  
+  
+  # ===================================================================
+  # АВТОМАТИЗАЦИЯ: Уведомление о недоступных датчиках
+  # ===================================================================
+  automation:
+    - id: 'average_temp_sensors_unavailable'
+      alias: 'Температура: Проверка доступности датчиков'
+      description: 'Уведомляет если более 2 датчиков недоступны'
+      
+      trigger:
+        - platform: state
+          entity_id:
+            - sensor.1_gb_in_temp
+            - sensor.0x00124b00272a6db8_temperature_2
+            - sensor.0x00124b00272b9087_temperature
+            - sensor.0x00124b002725c63f_temperature
+            - sensor.0x00124b0027250176_temperature
+            - sensor.0xa4c138ade62a2cd7_temperature
+            - sensor.0xa4c1382021036559_temperature
+          to:
+            - 'unavailable'
+            - 'unknown'
+          for:
+            minutes: 10
+      
+      condition:
+        # Проверяем, что недоступно больше 2 датчиков
+        - condition: template
+          value_template: >
+            {% set sensors = [
+              'sensor.1_gb_in_temp',
+              'sensor.0x00124b00272a6db8_temperature_2',
+              'sensor.0x00124b00272b9087_temperature',
+              'sensor.0x00124b002725c63f_temperature',
+              'sensor.0x00124b0027250176_temperature',
+              'sensor.0xa4c138ade62a2cd7_temperature',
+              'sensor.0xa4c1382021036559_temperature'
+            ] %}
+            {% set unavailable = sensors 
+              | select('is_state', 'unavailable') 
+              | list | length +
+              sensors 
+              | select('is_state', 'unknown') 
+              | list | length %}
+            {{ unavailable > 2 }}
+      
+      action:
+        - service: notify.me
+          data:
+            title: '⚠️ ПРОБЛЕМА С ДАТЧИКАМИ ТЕМПЕРАТУРЫ'
+            message: >
+              {% set sensors = [
+                'sensor.1_gb_in_temp',
+                'sensor.0x00124b00272a6db8_temperature_2',
+                'sensor.0x00124b00272b9087_temperature',
+                'sensor.0x00124b002725c63f_temperature',
+                'sensor.0x00124b0027250176_temperature',
+                'sensor.0xa4c138ade62a2cd7_temperature',
+                'sensor.0xa4c1382021036559_temperature'
+              ] %}
+              {% set unavailable_list = [] %}
+              {% for sensor in sensors %}
+                {% if states(sensor) in ['unavailable', 'unknown'] %}
+                  {% set unavailable_list = unavailable_list + [sensor] %}
+                {% endif %}
+              {% endfor %}
+              
+              🚨 Недоступно датчиков: {{ unavailable_list | length }} из 7
+              
+              ❌ Проблемные датчики:
+              {% for sensor in unavailable_list %}
+              • {{ state_attr(sensor, 'friendly_name') or sensor.split('.')[-1] }}
+              {% endfor %}
+              
+              ⏰ Время: {{ now().strftime('%d.%m.%Y %H:%M:%S') }}
+              
+              ℹ️ Средняя температура рассчитывается по доступным датчикам.
+        
+        - service: logbook.log
+          data:
+            name: "Температура"
+            message: "⚠️ Более 2 датчиков температуры недоступны"
+  
+  
+  # ===================================================================
+  # DASHBOARD КАРТОЧКА для отображения
+  # ===================================================================
+  # Добавьте в свой dashboard (Lovelace):
+  #
+  # type: vertical-stack
+  # cards:
+  #   # Основная карточка с средней температурой
+  #   - type: gauge
+  #     entity: sensor.average_temperature
+  #     name: Средняя температура в доме
+  #     min: 0
+  #     max: 35
+  #     needle: true
+  #     severity:
+  #       green: 18
+  #       yellow: 25
+  #       red: 28
+  #   
+  #   # Карточка с деталями
+  #   - type: entities
+  #     title: 📊 Статистика температуры
+  #     entities:
+  #       - entity: sensor.average_temperature
+  #         name: 🌡️ Средняя
+  #       - type: attribute
+  #         entity: sensor.average_temperature
+  #         attribute: min_temperature
+  #         name: ❄️ Минимум
+  #       - type: attribute
+  #         entity: sensor.average_temperature
+  #         attribute: max_temperature
+  #         name: 🔥 Максимум
+  #       - type: attribute
+  #         entity: sensor.average_temperature
+  #         attribute: temperature_range
+  #         name: 📏 Диапазон
+  #       - type: attribute
+  #         entity: sensor.average_temperature
+  #         attribute: available_sensors
+  #         name: ✅ Доступно датчиков
+  #   
+  #   # Карточка со всеми датчиками
+  #   - type: entities
+  #     title: 🌡️ Все датчики температуры
+  #     entities:
+  #       - sensor.1_gb_in_temp
+  #       - sensor.0x00124b00272a6db8_temperature_2
+  #       - sensor.0x00124b00272b9087_temperature
+  #       - sensor.0x00124b002725c63f_temperature
+  #       - sensor.0x00124b0027250176_temperature
+  #       - sensor.0xa4c138ade62a2cd7_temperature
+  #       - sensor.0xa4c1382021036559_temperature
+  #     state_color: true
+  
+  
+  # ===================================================================
+  # ИНСТРУКЦИЯ ПО ИСПОЛЬЗОВАНИЮ
+  # ===================================================================
+  #
+  # ✅ ГОТОВО К ИСПОЛЬЗОВАНИЮ!
+  #
+  # После перезапуска Home Assistant у вас появится:
+  #
+  # 1. Сенсор: sensor.average_temperature
+  #    - Показывает среднюю температуру по всем 7 датчикам
+  #    - Автоматически игнорирует недоступные датчики
+  #    - Округление до 1 знака после запятой
+  #
+  # 2. Атрибуты сенсора (доступны в Developer Tools):
+  #    - available_sensors: количество доступных датчиков (из 7)
+  #    - min_temperature: минимальная температура
+  #    - max_temperature: максимальная температура
+  #    - temperature_range: разница между max и min
+  #    - sensor_details: детали по каждому датчику
+  #
+  # 3. Автоматизация:
+  #    - Уведомление в Telegram если >2 датчиков недоступны
+  #    - Задержка 10 минут для избежания ложных срабатываний
+  #
+  # 4. Использование в автоматизациях:
+  #    trigger:
+  #      - platform: numeric_state
+  #        entity_id: sensor.average_temperature
+  #        above: 25
+  #
+  # 5. Использование в шаблонах:
+  #    {{ states('sensor.average_temperature') }}
+  #    {{ state_attr('sensor.average_temperature', 'min_temperature') }}
+  #
+  # ===================================================================

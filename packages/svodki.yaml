@@ -1,0 +1,131 @@
+svodki:
+  sensor:
+    - platform: template
+      sensors:
+        pogoda:
+          value_template: >
+            {% set condition = states('sensor.t104_1_2_condition_forecast_0d') %}
+            {% if condition == 'rainy' %}
+              Дождливо, уровень осадков {{ states('sensor.t104_1_2_precipitation_2') }} мм
+            {% elif condition == 'snowy' %}
+              Снегопад, уровень осадков {{ states('sensor.t104_1_2_precipitation_2') }} мм
+            {% elif condition == 'cloudy' %}
+              Пасмурно, минимальная температура {{ states('sensor.t104_1_2_low_temperature_forecast_0d') }} °C
+            {% elif condition == 'partlycloudy' %}
+              Переменная облачность, макс. ветер {{ states('sensor.t104_1_2_wind_speed_forecast_0d') }} м/с
+            {% elif condition == 'sunny' %}
+              Ясный день
+            {% else %}
+              Сбой в прогнозе ({{ condition }})
+            {% endif %}
+
+  automation:
+    - id: "system_otchet_svodki"
+      alias: 111 Отчёт системы
+      description: "svodki"
+      trigger:
+        - platform: time
+          at: 06:30:00
+        - platform: time
+          at: "12:59:00"
+        - platform: time
+          at: "15:59:00"
+        - platform: time
+          at: "21:30:00"
+      condition: []
+      action:
+        - service: telegram_bot.send_message
+          data:
+            config_entry_id: !secret telegram_entry_id_info
+            target:
+              - !secret chat_serv
+
+            message: |
+
+              Сводка системы:
+              {# Температура на улице #} {% set out_temp = states('sensor.1_gb_out_temp') %}{% set min_out_temp = states('sensor.t104_1_2_low_temperature_forecast_0d') %}{% set max_out_temp = states('sensor.t104_1_2_temperature_forecast_0d') %} Темп на улице: ( {{ min_out_temp if min_out_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }}...{{ out_temp if out_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }}...{{ max_out_temp if min_out_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} )°C; {% if is_state('binary_sensor.pos_outside_temp_trend', 'off') %} ↓ {% else %} ↑ {% endif %} 
+                Ощущается как: {% set apparent_temp = states('sensor.t104_1_2_apparent_temperature') %} {{ apparent_temp if apparent_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Влажность и условие #} {% set humid = states('sensor.t104_1_2_humidity') %} {% set condition = states('sensor.t104_1_2_condition') %} Влажность: {{ humid if humid not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} % - {{ condition if condition not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }}
+              {# Ветер #} {% set wind_bearing = states('sensor.t104_1_2_wind_bearing') %} {% set wind_speed = states('sensor.t104_1_2_wind_speed') %} {% set wind_bearing_2 = states('sensor.t104_1_2_wind_bearing_2') %} Ветер: {{ wind_bearing if wind_bearing not in ['unavailable', 'unknown', 'none', ''] else '—' }}/{{ wind_speed if wind_speed not in ['unavailable', 'unknown', 'none', ''] else '—' }} м/с - {{ wind_bearing_2 if wind_bearing_2 not in ['unavailable', 'unknown', 'none', ''] else '—' }};
+
+              {# Среднежилая температура #} {% set avg_temp = states('sensor.average_temperature') %}Среднежилая Т: {{ avg_temp if avg_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} {% if is_state('binary_sensor.town_temp_trend', 'off') %} ↑ {% else %} ↓ {% endif %};
+              {# Температуры по комнатам #} 
+              {% set room1_temp = states('sensor.1_gb_in_temp') %} Температура на первом: {{ room1_temp if room1_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {% set room21_temp = states('sensor.0x00124b00272a6db8_temperature_2') %} {% set andrey_room_min = states('sensor.andrey_room_min') %} Темп у Андрея: {{ room21_temp if room21_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} / {{ andrey_room_min if andrey_room_min not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {% set room22_temp = states('sensor.0x00124b00272b9087_temperature') %} Темп у Агаты: {{ room22_temp if room22_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {% set room23_temp = states('sensor.0x00124b002725c63f_temperature') %} Темп у Артёма: {{ room23_temp if room23_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {% set room31_temp = states('sensor.0x00124b0027250176_temperature') %} Температура в спальне: {{ room31_temp if room31_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {% set room33_temp = states('sensor.0xa4c138ade62a2cd7_temperature') %} Температура в кабинете: {{ room33_temp if room33_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {% set room4_temp = states('sensor.0xa4c1382021036559_temperature') %} Температура в кинотеатре: {{ room4_temp if room4_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Нагнетатель #}
+              {% set press_status = states('sensor.press_status') %} Нагнетатель: {{ press_status if press_status not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Давление воды #}
+              {% set water_press = states('sensor.0d1miniwater_0waterdata_pressure_bar')|round(2) %} Давление воды: {{ water_press if water_press not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} атмосферы;
+              {# Температура холодной воды #} 
+              {% set cold_water = states('sensor.cold_water_min') %} Температура холодной воды min: {{ cold_water if cold_water not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {% set cold_water2 = states('sensor.0temperature_000_temp') %} Температура холодной воды: {{ cold_water2 if cold_water2 not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Температура горячей воды #}
+              {% set hot_water = states('sensor.0temperature_010_temp') %} Температура горячей воды: {{ hot_water if hot_water not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Расход воды за вчера #}
+              {% set cold_water_daily = states('sensor.cold_water_daily') %} Расход воды за вчера: {{ cold_water_daily if cold_water_daily not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} литров {% if is_state('binary_sensor.cold_water_trend', 'off') %} ↓ {% else %} ↑ {% endif %};
+              {# Газовый котёл #}
+              {% set gaz_status = states('sensor.gaz_status') %} Газовый котёл: {{ gaz_status if gaz_status not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Признак отказа котла #} {% if is_state('sensor.1_gb_fault', 'False') %}Признак отказа котла: Нет отказа {% else %}Признак отказа котла: ⚠️ Отказ {% endif %}
+              {# Кубов газа за вчера #} {% set gas_daily = state_attr('sensor.gas_daily_single', 'last_period') %} Кубов газа за вчера: {{ gas_daily if gas_daily not in [None, 'unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} кубов;
+              {# Т котла (задан/факт) #}
+              {% set kotel_set = states('sensor.1_gb_temp_set') %} {% set kotel_fact = states('sensor.1_gb_indicator_temp') %} Т котла (задан/факт): {{ kotel_set if kotel_set not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} / {{ kotel_fact if kotel_fact not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Температура теплоносителя #} {% set teplonositel = states('sensor.1_1_kotel_out') %} Температура теплоносителя: {{ teplonositel if teplonositel not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Температура в погребе #}
+              {% set basement_temp = states('sensor.0_climate_temperature_2') %} Температура в погребе: {{ basement_temp if basement_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Влажность в погребе #}
+              {% set basement_humid = states('sensor.0_climate_humidity_2') %} Влажность в погребе: {{ basement_humid if basement_humid not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Люк погреба #} {% set latch_status = states('sensor.latch_status') %} Люк погреба: {{ latch_status if latch_status not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Температура основного процессора #} {% set cpu_temp = states('sensor.processor_temperature') %} Темп основного процессора: {{ cpu_temp if cpu_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Занято диска #} {% set disk_use = states('sensor.disk_use_percent') %} Занято диска: {{ disk_use if disk_use not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} %;
+              {# Температуры DSM #} {% set dsm_cpu_temp = states('sensor.diskstation_temperatura') %} {% set dsm_drive_1 = states('sensor.diskstation_drive_1_temperatura') %} {% set dsm_drive_2 = states('sensor.diskstation_drive_2_temperatura') %} {% set dsm_drive_3 = states('sensor.diskstation_drive_3_temperature') %}
+              Темп процессора DSM: {{ dsm_cpu_temp if dsm_cpu_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }}; 
+              Темп DSM диска 1: {{ dsm_drive_1 if dsm_drive_1 not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              Темп DSM диска 2: {{ dsm_drive_2 if dsm_drive_2 not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              Темп DSM диска 3: {{ dsm_drive_3 if dsm_drive_3 not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Тёплый пол #} {% set warmfloor_status = states('sensor.warmfloor_status') %} Тёплый пол: {{ warmfloor_status if warmfloor_status not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Уровень дыма #} {% set smoke = states('sensor.0x00158d000632e673_smoke_density') %} Уровень дыма в тауне: {{ smoke if smoke not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} единицы;
+              {# Средний люкс #} {% set lux = states('sensor.average_light_lux') %} Средний люкс: {{ lux if lux not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# Средний белый свет #} {% set white = states('sensor.average_light_white') %} Средний белый свет: {{ white if white not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+              {# АС #} {% set reserve_status = states('sensor.reserve_status') %} АС: {{ reserve_status if reserve_status not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};
+
+              {# Верхний стик #} {% set upper_status = states('binary_sensor.z2m_bridge_upper_state') %} Верхний стик: {{ upper_status if upper_status not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};              
+              {# Нижний стик #} {% set down_status = states('binary_sensor.z2m_bridge_down_state') %} Нижний стик: {{ down_status if down_status not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }}.
+      mode: single
+
+    - id: "utro_novosti_svodki"
+      alias: ИНФ Доброе утро 1
+      description: УТРО. НОВОСТИ. ТЕЛЕГА
+      trigger:
+        - platform: time
+          at: 05:45:00
+      condition: []
+      action:
+        service: telegram_bot.send_message
+        data:
+          config_entry_id: !secret telegram_entry_id_info
+          target:
+            - !secret chat_serv
+
+          message: >-
+
+            Доброе утро!
+
+            Сегодня {{ now().strftime("%d") }} {{states('sensor.month_rus')}} {{ now().strftime("%Y") }} — {{states('sensor.day_of_week_rus')}};
+
+            Погода: {{ pogoda if pogoda not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }};              
+
+            {% set weather_status = state_attr("weather.forecast_home", "temperature") %} Температура за окном: {{ weather_status if weather_status not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} градусов
+
+            {% set fact_temp = states('sensor.1_gb_out_temp') %} Фактически с датчика: {{ fact_temp if fact_temp not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —'}} градусов,
+
+            {% set pogoda = states('sensor.pogoda') %} Погода: {{ pogoda if pogoda not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }}
+
+            {% set vlazhnost = state_attr("weather.forecast_home", "humidity") %} влажность: {{ vlazhnost if vlazhnost not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} %,
+
+            {% set veter = state_attr("weather.forecast_home", "wind_bearing")|round(0) %} ветер: {{ veter if veter not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —' }} градусов, {% set veter_velocity = state_attr("weather.forecast_home", "wind_speed") %} {{ veter_velocity if veter_velocity not in ['unavailable', 'unknown', 'none', ''] else '— Нет данных —'  }} м/с.
+      mode: single

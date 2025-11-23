@@ -1,0 +1,225 @@
+warnings:
+  sensor:
+
+  automation:
+    - id: "2246487800981"
+      alias: "УВД: контроль отказа DSM"
+      description: ""
+      trigger:
+        - platform: state
+          entity_id:
+            - binary_sensor.diskstation_sostoianie_bezopasnosti
+          to: "unavailable"
+          for:
+            hours: 0
+            minutes: 10
+            seconds: 0
+      condition: []
+      action:
+        - service: notify.me
+          data:
+            message: "DiskStation неактивен. Проверь питание."
+        - service: notify.warning
+          data:
+            message: "Домашний сервер отказал. Сообщите Павлу."
+      mode: single
+
+    - id: "1673008897981"
+      alias: "УВД: контроль отказа нагнетателя"
+      description: ""
+      trigger:
+        - platform: state
+          entity_id:
+            - sensor.water_press_mon
+          to: "true"
+          for:
+            hours: 12
+            minutes: 0
+            seconds: 0
+      condition: []
+      action:
+        - service: notify.me
+          data:
+            message: "Нагнетатель неактивен. Проверь на отказ."
+        - service: notify.warning
+          data:
+            message: "Нагнетатель неактивен. Проверь на отказ."
+      mode: single
+
+    - id: "1646752136615"
+      alias: Обнаружение газа в бойлерной
+      description: "Датчик в бойлерной обнаружил утечку газа"
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.0x00158d0006d4d664_gas
+          attribute: gas
+          to: "true"
+      condition: []
+      action:
+        - service: notify.me
+          data:
+            message: "УТЕЧКА ГАЗА В БОЙЛЕРНОЙ"
+        - service: notify.anna
+          data:
+            message: "ОПАСНО. УТЕЧКА ГАЗА В БОЙЛЕРНОЙ."
+        - service: notify.warning
+          data:
+            message: "ОПАСНО. УТЕЧКА ГАЗА В БОЙЛЕРНОЙ."
+      mode: single
+
+    - id: "22164675213661541"
+      alias: Обнаружение дыма в тауне
+      description: "Датчик дыма обнаружил дым"
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.0x00158d000632e673_smoke
+          to: "on"
+      condition: []
+      action:
+        - service: notify.me
+          data:
+            message: "ДЫМ В ТАУНЕ! ПОЖАР???"
+        - service: notify.anna
+          data:
+            message: "ДЫМ В ТАУНЕ! ПОЖАР???"
+        - service: notify.warning
+          data:
+            message: "ДЫМ В ТАУНЕ! ПОЖАР???"
+      mode: single
+
+    - alias: Бинарный датчик воды в солевом баке в погребе
+      description: "Датчик показал, что воды мало"
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.0saltalart
+          to: "off"
+      condition: []
+      action:
+        - service: notify.me
+          data:
+            message: Рекомендую проверить уровень соли в баке.
+        - delay:
+            hours: 12
+            minutes: 0
+            seconds: 0
+            milliseconds: 0
+      mode: single
+
+    - id: "1640108347800"
+      alias: "АВТ: контроль ТП"
+      description: ""
+      trigger:
+        - platform: state
+          entity_id:
+            - switch.0xa4c138d472a39fd1
+          from: "on"
+          to: "off"
+          for: 07:01:00
+      condition: []
+      action:
+        - service: notify.family
+          data:
+            message: "ВНИМАНИЕ: Розетка насоса ТП выключена больше 7 часов!"
+      mode: single
+
+    - id: "1640108347801"
+      alias: "АВТ: контроль ТП по недоступности"
+      description: ""
+      trigger:
+        - platform: state
+          entity_id:
+            - switch.0xa4c138d472a39fd1
+          to: "unavailable"
+          for: 01:01:00
+      condition: []
+      action:
+        - service: notify.family
+          data:
+            message: "ВНИМАНИЕ: Розетка насоса ТП недоступна!!!"
+      mode: single
+
+    - id: "1640108347802"
+      alias: "АВТ: контроль розетки котла по недоступности"
+      description: ""
+      trigger:
+        - platform: state
+          entity_id:
+            - switch.0xa4c138c4cf2b9ba8
+          to: "unavailable"
+          for: 01:01:00
+      condition: []
+      action:
+        - service: notify.family
+          data:
+            message: "ВНИМАНИЕ: Розетка котла недоступна!!!"
+        - service: notify.warning
+          data:
+            message: "ВНИМАНИЕ: Розетка котла недоступна!!!"
+      mode: single
+
+    - id: "1640108347803"
+      alias: "АВТ: контроль розетки полотенцесушителя по недоступности"
+      description: ""
+      trigger:
+        - platform: state
+          entity_id:
+            - switch.0xa4c138979c15513f
+          to: "unavailable"
+          for: 01:01:00
+      condition: []
+      action:
+        - service: notify.family
+          data:
+            message: "ВНИМАНИЕ: Розетка полотенцесушителя недоступна!!!"
+      mode: single
+
+    - id: "1640108347804"
+      alias: "АВТ: контроль розетки нагнетателя по недоступности"
+      description: ""
+      trigger:
+        - platform: state
+          entity_id:
+            - switch.0x84ba20fffe2ab5b5
+          to: "unavailable"
+          for: 01:01:00
+      condition: []
+      action:
+        - service: notify.family
+          data:
+            message: "ВНИМАНИЕ: Розетка нагнетателя воды недоступна!!!"
+      mode: single
+
+    # - id: '1653374482819'
+    #   alias: 'УВД: питание нагнетателя check'
+    #   description: 'Нагнетатель запитан, но не работает'
+    #   trigger:
+    #     - platform: numeric_state
+    #       entity_id: sensor.0_press_power
+    #       below: 3
+    #       for:
+    #         hours: 00
+    #         minutes: 15
+    #         seconds: 00
+    #   condition: []
+    #   action:
+    #   - service: media_player.play_media
+    #     target:
+    #       entity_id: media_player.yandex_station_ff98f029bea6b9d07af1f25c
+    #     data:
+    #       media_content_id: media-source://tts/yandex_station?message=%D0%92%D0%9D%D0%98%D0%9C%D0%90%D0%9D%D0%98%D0%95%21+%D0%9D%D0%B0%D0%B3%D0%BD%D0%B5%D1%82%D0%B0%D1%82%D0%B5%D0%BB%D1%8C+%D0%B4%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F+%D0%BE%D0%B1%D0%B5%D1%81%D1%82%D0%BE%D1%87%D0%B5%D0%BD.+%D0%9D%D0%B5%D1%82+%D0%BD%D0%BE%D1%80%D0%BC%D0%B0%D0%BB%D1%8C%D0%BD%D0%BE%D0%B3%D0%BE+%D0%B4%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F+%D0%B2%D0%BE%D0%B4%D1%8B.
+    #       media_content_type: text
+    #     metadata:
+    #       title: ВНИМАНИЕ! Нагнетатель давления обесточен. Нет нормального давления воды.
+    #       thumbnail: https://brands.home-assistant.io/_/tts/icon.png
+    #       media_class: app
+    #       children_media_class:
+    #       navigateIds:
+    #       - {}
+    #       - media_content_type: text
+    #         media_content_id: media-source://tts/yandex_station?message=%D0%92%D0%9D%D0%98%D0%9C%D0%90%D0%9D%D0%98%D0%95%21+%D0%9A%D0%BE%D1%82%D1%91%D0%BB+%D0%B2%D1%8B%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%BD.+%D0%93%D0%B0%D0%B7%D0%BE%D0%B2%D1%8B%D0%B9+%D0%BA%D0%BE%D1%82%D1%91%D0%BB+%D0%B2%D1%8B%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%BD.
+    #       - media_content_type: text
+    #         media_content_id: media-source://tts/yandex_station?message=%D0%92%D0%9D%D0%98%D0%9C%D0%90%D0%9D%D0%98%D0%95%21+%D0%9D%D0%B0%D0%B3%D0%BD%D0%B5%D1%82%D0%B0%D1%82%D0%B5%D0%BB%D1%8C+%D0%B4%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F+%D0%BE%D0%B1%D0%B5%D1%81%D1%82%D0%BE%D1%87%D0%B5%D0%BD.+%D0%9D%D0%B5%D1%82+%D0%BD%D0%BE%D1%80%D0%BC%D0%B0%D0%BB%D1%8C%D0%BD%D0%BE%D0%B3%D0%BE+%D0%B4%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F+%D0%B2%D0%BE%D0%B4%D1%8B.
+    #   - service: notify.me
+    #     data:
+    #       message: "ВНИМАНИЕ! Нагнетатель давления обесточен. Нет нормального давления воды."
+    #   mode: single
