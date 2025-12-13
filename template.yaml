@@ -1,0 +1,392 @@
+
+# 
+
+- sensor:
+    - name: "Уровень CO2 Андрея обработанный"
+      unique_id: andco2
+      default_entity_id: sensor.andco2
+      unit_of_measurement: "ppm"
+      state: >-
+        {% set andco2 = states('sensor.0x00124b00272a6db8_co2_2') | float(0) | round(0) %}
+        {% if andco2 > 1000000 %}
+          {{ (andco2 / 1000000) | round(0) }}
+        {% else %}
+          {{ andco2 }}
+        {% endif %}
+
+
+# =========================
+# День недели / месяц
+# =========================
+- sensor:
+    - name: "day_of_week"
+      unique_id: day_of_week
+      default_entity_id: sensor.day_of_week
+      icon: mdi:calendar
+      state: >-
+        {{ now().strftime("%A") }}
+
+    - name: "day_of_week_rus"
+      unique_id: day_of_week_rus
+      default_entity_id: sensor.day_of_week_rus
+      icon: mdi:calendar
+      state: >-
+        {% if is_state("sensor.day_of_week", "Monday") %}Понедельник
+        {% elif is_state("sensor.day_of_week", "Tuesday") %}Вторник
+        {% elif is_state("sensor.day_of_week", "Wednesday") %}Среда
+        {% elif is_state("sensor.day_of_week", "Thursday") %}Четверг
+        {% elif is_state("sensor.day_of_week", "Friday") %}Пятница
+        {% elif is_state("sensor.day_of_week", "Saturday") %}Суббота
+        {% elif is_state("sensor.day_of_week", "Sunday") %}Воскресенье
+        {% else %}Ошибка
+        {% endif %}
+
+    - name: "month_now"
+      unique_id: month_now
+      default_entity_id: sensor.month_now
+      icon: mdi:calendar
+      state: >-
+        {{ now().strftime("%B") }}
+
+    - name: "month_rus"
+      unique_id: month_rus
+      default_entity_id: sensor.month_rus
+      icon: mdi:calendar
+      state: >-
+        {% if is_state("sensor.month_now", "January") %}Январь
+        {% elif is_state("sensor.month_now", "February") %}Февраль
+        {% elif is_state("sensor.month_now", "March") %}Март
+        {% elif is_state("sensor.month_now", "April") %}Апрель
+        {% elif is_state("sensor.month_now", "May") %}Май
+        {% elif is_state("sensor.month_now", "June") %}Июнь
+        {% elif is_state("sensor.month_now", "July") %}Июль
+        {% elif is_state("sensor.month_now", "August") %}Август
+        {% elif is_state("sensor.month_now", "September") %}Сентябрь
+        {% elif is_state("sensor.month_now", "October") %}Октябрь
+        {% elif is_state("sensor.month_now", "November") %}Ноябрь
+        {% elif is_state("sensor.month_now", "December") %}Декабрь
+        {% else %}Ошибка
+        {% endif %}
+
+    - name: "month_rus_before"
+      unique_id: month_rus_before
+      default_entity_id: sensor.month_rus_before
+      icon: mdi:calendar
+      state: >-
+        {% if is_state("sensor.month_now", "January") %}Декабрь
+        {% elif is_state("sensor.month_now", "February") %}Январь
+        {% elif is_state("sensor.month_now", "March") %}Февраль
+        {% elif is_state("sensor.month_now", "April") %}Март
+        {% elif is_state("sensor.month_now", "May") %}Апрель
+        {% elif is_state("sensor.month_now", "June") %}Май
+        {% elif is_state("sensor.month_now", "July") %}Июнь
+        {% elif is_state("sensor.month_now", "August") %}Июль
+        {% elif is_state("sensor.month_now", "September") %}Август
+        {% elif is_state("sensor.month_now", "October") %}Сентябрь
+        {% elif is_state("sensor.month_now", "November") %}Октябрь
+        {% elif is_state("sensor.month_now", "December") %}Ноябрь
+        {% else %}Ошибка
+        {% endif %}
+
+# =========================
+# Электричество / котёл
+# =========================
+- sensor:
+    - name: "electro_delta"
+      unique_id: electro_delta
+      default_entity_id: sensor.electro_delta
+      unit_of_measurement: "W"
+      state: >-
+        {{
+          (
+            states('sensor.pzem_004t_v3_power')|float(0)
+            + states('sensor.0xe0798dfffec3727a_power')|float(0)
+            + states('sensor.0x9035eafffeba7c2c_power')|float(0)
+            + states('sensor.0xe0798dfffeceb563_power')|float(0)
+            + states('sensor.0x385b44fffe95d3f7_power')|float(0)
+          ) | round(1)
+        }}
+
+    - name: "electro_delta_real"
+      unique_id: electro_delta_real
+      default_entity_id: sensor.electro_delta_real
+      unit_of_measurement: "W"
+      state: >-
+        {{
+          (states('sensor.0xb4e3f9fffecfb25f_power')|float(0) - states('sensor.electro_delta')|float(0))
+          | round(1)
+        }}
+
+    - name: "kotel_delta"
+      unique_id: kotel_delta
+      default_entity_id: sensor.kotel_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{
+          (states('sensor.1_gb_indicator_temp')|float(0) - states('sensor.1_gb_temp_set')|float(0))
+          | round(1)
+        }}
+
+    - name: "pressure_mm"
+      unique_id: pressure_mm
+      default_entity_id: sensor.pressure_mm
+      unit_of_measurement: "мм рт. ст."
+      state: >-
+        {{ (states('sensor.0x00158d0006ebfc7c_pressure')|float(0) * 0.750062) | round(1) }}
+
+    - name: "street_temp"
+      unique_id: street_temp
+      default_entity_id: sensor.street_temp
+      unit_of_measurement: "°C"
+      state: >-
+        {{ states('sensor.1_gb_out_temp') | float(0) | round(2) }}
+
+# =========================
+# Булевые статусы (лучше как binary_sensor)
+# =========================
+- binary_sensor:
+    - name: "water_press_mon"
+      unique_id: water_press_mon
+      default_entity_id: binary_sensor.water_press_mon
+      # если это "мониторинг проблемы", можно так:
+      device_class: problem
+      state: >-
+        {{ state_attr('sensor.0_press_power_2', 'power') | float(0) < 4 }}
+
+    - name: "vent_mon"
+      unique_id: vent_mon
+      default_entity_id: binary_sensor.vent_mon
+      device_class: power
+      state: >-
+        {{ states('sensor.0x385b44fffe95d3f7_power') | float(0) < 10 }}
+
+    - name: "agata_gaming"
+      unique_id: agata_gaming
+      default_entity_id: binary_sensor.agata_gaming
+      device_class: power
+      state: >-
+        {{ states('sensor.0x540f57fffe91f7da_power') | float(0) > 150 }}
+
+    - name: "esp_water_offline"
+      unique_id: esp_water_offline
+      default_entity_id: binary_sensor.esp_water_offline
+      device_class: connectivity
+      state: >-
+        {{ is_state('sensor.0temp_wire', 'unavailable') }}
+        
+# =========================
+# Контроль "упавших" ESP
+# (оставляю как sensor со строками "Упал/Работает" — как у тебя было)
+# =========================
+- sensor:
+    - name: "esp_temp_offline"
+      unique_id: esp_temp_offline
+      default_entity_id: sensor.esp_temp_offline
+      state: >-
+        {% if is_state('sensor.001_temp', 'unavailable') %}Упал
+        {% else %}Работает
+        {% endif %}
+
+    - name: "esp_pzem_offline"
+      unique_id: esp_pzem_offline
+      default_entity_id: sensor.esp_pzem_offline
+      state: >-
+        {% if is_state('sensor.mh_z19_co2_value', 'unavailable') %}Упал
+        {% else %}Работает
+        {% endif %}
+
+    - name: "esp_gaz_offline"
+      unique_id: esp_gaz_offline
+      default_entity_id: sensor.esp_gaz_offline
+      state: >-
+        {# было sensor.1.1_kotel_out — исправил на sensor.1_1_kotel_out #}
+        {% if is_state('sensor.1_1_kotel_out', 'unavailable') %}Упал
+        {% else %}Работает
+        {% endif %}
+
+# =========================
+# Статусы котла / исполнительных устройств (строковые)
+# =========================
+- sensor:
+    - name: "gas_burning"
+      unique_id: gas_burning
+      default_entity_id: sensor.gas_burning
+      state: >-
+        {% if is_state('sensor.1_gb_flame', 'False') %}Потухло
+        {% else %}Горит
+        {% endif %}
+
+    - name: "warmfloor_status"
+      unique_id: warmfloor_status
+      default_entity_id: sensor.warmfloor_status
+      state: >-
+        {% if is_state('switch.0_warmfloor_2', 'on') %}Работает
+        {% elif is_state('switch.0_warmfloor_2', 'off') %}Выключен {{'\U0001F7E5'}}
+        {% else %}Недоступен
+        {% endif %}
+
+    - name: "gaz_status"
+      unique_id: gaz_status
+      default_entity_id: sensor.gaz_status
+      state: >-
+        {% if is_state('switch.0_gaz_2', 'on') %}Работает
+        {% elif is_state('switch.0_gaz_2', 'off') %}Выключен {{'\U0001F7E5'}}
+        {% else %}Недоступен
+        {% endif %}
+
+    - name: "towel_status"
+      unique_id: towel_status
+      default_entity_id: sensor.towel_status
+      state: >-
+        {% if is_state('switch.0_towel_2', 'on') %}Работает
+        {% elif is_state('switch.0_towel_2', 'off') %}Выключен {{'\U0001F7E5'}}
+        {% else %}Недоступен
+        {% endif %}
+
+    - name: "press_status"
+      unique_id: press_status
+      default_entity_id: sensor.press_status
+      state: >-
+        {% if is_state('switch.0_press_2', 'on') %}Работает
+        {% elif is_state('switch.0_press_2', 'off') %}{{'\U0001F7E5'}} Выключен {{'\U0001F7E5'}}
+        {% else %}Недоступен
+        {% endif %}
+
+    - name: "neptun_status"
+      unique_id: neptun_status
+      default_entity_id: sensor.neptun_status
+      state: >-
+        {% if is_state('switch.0_neptun', 'on') %}Работает
+        {% elif is_state('switch.0_neptun', 'off') %}Выключен {{'\U0001F7E5'}}
+        {% else %}Недоступен
+        {% endif %}
+
+    - name: "latch_status"
+      unique_id: latch_status
+      default_entity_id: sensor.latch_status
+      state: >-
+        {% if is_state('binary_sensor.0_latch_contact', 'on') %}(!)Открыт
+        {% elif is_state('binary_sensor.0_latch_contact', 'off') %}Закрыт
+        {% else %}Недоступен
+        {% endif %}
+
+# =========================
+# Электричество (сделал energy/kWh, чтобы HA не ругался и статистика была нормальная)
+# =========================
+- sensor:
+    - name: "Показания электросчетика"
+      unique_id: electrocounter
+      default_entity_id: sensor.electrocounter
+      device_class: energy
+      state_class: total_increasing
+      unit_of_measurement: "kWh"
+      icon: mdi:counter
+      state: >-
+        {{ (state_attr('sensor.maincb_energy', 'energy') | float(0) + 13667) | round(2) }}
+
+    - name: "Показания электросчетика в щите"
+      unique_id: boxelectrocounter
+      default_entity_id: sensor.boxelectrocounter
+      device_class: energy
+      state_class: total_increasing
+      unit_of_measurement: "kWh"
+      icon: mdi:counter
+      state: >-
+        {{ states('sensor.electrocounter') | float(0) }}
+
+    - name: "Показания электросчетика за прошлый месяц"
+      unique_id: electrocounter_last
+      default_entity_id: sensor.electrocounter_last
+      device_class: energy
+      unit_of_measurement: "kWh"
+      icon: mdi:counter
+      state: >-
+        {{ state_attr('sensor.raskhod_elektrichestva_za_mesiats', 'last_period') | float(0) }}
+
+# =========================
+# Газ (device_class: gas в нижнем регистре)
+# =========================
+- sensor:
+    - name: "Показания счетика газа"
+      unique_id: gas_counter_sensor
+      default_entity_id: sensor.gas_counter_sensor
+      device_class: gas
+      state_class: total_increasing
+      unit_of_measurement: "m³"
+      icon: mdi:counter
+      state: >-
+        {{ (states('counter.gas_counter') | float(0)) / 1000 }}
+
+# =========================
+# Дельты температур (°C)
+# =========================
+- sensor:
+    - name: "Дельта T первого контура ТП"
+      unique_id: tp_delta_01
+      default_entity_id: sensor.01_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.001_temp')|float(0) - states('sensor.008_temp')|float(0)) | round(2) }}
+
+    - name: "Дельта T второго контура ТП"
+      unique_id: tp_delta_02
+      default_entity_id: sensor.02_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.001_temp')|float(0) - states('sensor.005_temp')|float(0)) | round(2) }}
+
+    - name: "Дельта T третьего контура ТП"
+      unique_id: tp_delta_03
+      default_entity_id: sensor.03_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.001_temp')|float(0) - states('sensor.007_temp')|float(0)) | round(2) }}
+
+    - name: "Дельта T четвёртого контура ТП"
+      unique_id: tp_delta_04
+      default_entity_id: sensor.04_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.001_temp')|float(0) - states('sensor.004_temp')|float(0)) | round(2) }}
+
+    - name: "Дельта T пятого контура ТП"
+      unique_id: tp_delta_05
+      default_entity_id: sensor.05_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.001_temp')|float(0) - states('sensor.006_temp')|float(0)) | round(2) }}
+
+    - name: "Дельта T шестого контура ТП"
+      unique_id: tp_delta_06
+      default_entity_id: sensor.06_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.001_temp')|float(0) - states('sensor.002_temp')|float(0)) | round(2) }}
+
+    - name: "Дельта T седьмого контура ТП"
+      unique_id: tp_delta_07
+      default_entity_id: sensor.07_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.001_temp')|float(0) - states('sensor.003_temp')|float(0)) | round(2) }}
+
+    - name: "Дельта T восьмого контура ТП"
+      unique_id: tp_delta_08
+      default_entity_id: sensor.08_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.001_temp')|float(0) - states('sensor.009_temp')|float(0)) | round(2) }}
+
+    - name: "Дельта T батарей"
+      unique_id: tp_delta_09
+      default_entity_id: sensor.09_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.1_1_kotel_out')|float(0) - states('sensor.1_1_battery_out')|float(0)) | round(2) }}
+
+    - name: "Дельта T ТП"
+      unique_id: tp_delta_10
+      default_entity_id: sensor.10_tp_delta
+      unit_of_measurement: "°C"
+      state: >-
+        {{ (states('sensor.1_1_kotel_out')|float(0) - states('sensor.1_1_warm_floor_out')|float(0)) | round(2) }}
